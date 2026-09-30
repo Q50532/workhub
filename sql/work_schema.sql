@@ -32,3 +32,9 @@ Modify created_at Datetime Not Null Default Current_Timestamp;
 
 Alter Table tickets
 Modify status Varchar(30) Not Null Default 'Open';
+
+Insert Into users(username,email)
+Values('Tom','tom@test.com');
+select * from users;
+
+select* from tickets;

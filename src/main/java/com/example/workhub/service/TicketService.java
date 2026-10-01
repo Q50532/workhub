@@ -32,6 +32,27 @@ public class TicketService {
         return ticketMapper.update(id, ticket);
     }
 
+    public int updateStatus(int id, String newStatus){
+        Ticket ticket= ticketMapper.findById(id);
+        if (ticket ==null){
+            return 0;
+        }
+        
+        String currentStatus=ticket.getStatus();
+        
+        if ((currentStatus.equals("OPEN")  && newStatus.equals("IN_PROGRESS"))
+        ||  (currentStatus.equals("IN_PROGRESS")
+        && newStatus.equals("RESOLVED"))
+        || (currentStatus.equals("RESOLVED")
+        && newStatus.equals("CLOSED"))){
+            return ticketMapper.updateStatus(id, newStatus);
+        }
+        return -1;
+        
+
+
+    }
+
     public int delete(int id){
         return ticketMapper.delete(id);
     }

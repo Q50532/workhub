@@ -15,7 +15,7 @@ Create Table tickets(
     assigned_to Int,
     
     created_at Datetime Not Null,
-    status Varchar(30) Not Null,
+    status Varchar(30) Not Null Default 'OPEN',
     resolution Text);
     DESCRIBE tickets;
     

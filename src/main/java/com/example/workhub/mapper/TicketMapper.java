@@ -43,6 +43,17 @@ public interface TicketMapper {
         @Param ("ticket") Ticket ticket
     );
 
+    @Update("""
+            update tickets
+            Set
+                status=#{status}
+            where id=#{id}
+            """)
+    int updateStatus(
+        @Param ("id") int id,
+        @Param ("status") String status
+    );
+
     @Delete("""
             Delete from tickets
             where id = #{id}

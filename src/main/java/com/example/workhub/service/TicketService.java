@@ -2,8 +2,10 @@ package com.example.workhub.service;
 
 import org.springframework.stereotype.Service;
 
+import com.example.workhub.mapper.TicketLogMapper;
 import com.example.workhub.mapper.TicketMapper;
 import com.example.workhub.model.Ticket;
+import com.example.workhub.model.TicketLog;
 
 import java.util.List;
 
@@ -11,9 +13,11 @@ import java.util.List;
 public class TicketService {
 
     private final TicketMapper ticketMapper;
+    private final TicketLogMapper ticketLogMapper;
 
-    public TicketService(TicketMapper ticketMapper) {
+    public TicketService(TicketMapper ticketMapper, TicketLogMapper ticketLogMapper) {
         this.ticketMapper = ticketMapper;
+        this.ticketLogMapper = ticketLogMapper;
     }
 
     public int add(Ticket ticket) {
@@ -45,7 +49,18 @@ public class TicketService {
         && newStatus.equals("RESOLVED"))
         || (currentStatus.equals("RESOLVED")
         && newStatus.equals("CLOSED"))){
-            return ticketMapper.updateStatus(id, newStatus);
+            int result= ticketMapper.updateStatus(id, newStatus);
+            if (result==1){
+                TicketLog ticketLog=new TicketLog();
+
+                ticketLog.setTicketId(id);
+                ticketLog.setOldStatus(currentStatus);
+                ticketLog.setNewStatus(newStatus);
+
+                ticketLogMapper.add(ticketLog);
+
+            }
+            return result;
         }
         return -1;
         

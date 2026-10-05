@@ -4,8 +4,10 @@ import org.springframework.stereotype.Service;
 
 import com.example.workhub.mapper.TicketLogMapper;
 import com.example.workhub.mapper.TicketMapper;
+import com.example.workhub.mapper.UserMapper;
 import com.example.workhub.model.Ticket;
 import com.example.workhub.model.TicketLog;
+import com.example.workhub.model.User;
 
 import java.util.List;
 
@@ -14,10 +16,12 @@ public class TicketService {
 
     private final TicketMapper ticketMapper;
     private final TicketLogMapper ticketLogMapper;
+    private final UserMapper userMapper;
 
-    public TicketService(TicketMapper ticketMapper, TicketLogMapper ticketLogMapper) {
+    public TicketService(TicketMapper ticketMapper, TicketLogMapper ticketLogMapper,UserMapper userMapper) {
         this.ticketMapper = ticketMapper;
         this.ticketLogMapper = ticketLogMapper;
+        this.userMapper=userMapper;
     }
 
     public int add(Ticket ticket) {
@@ -66,6 +70,21 @@ public class TicketService {
         
 
 
+    }
+
+    public int updateAssignee(int id, Integer  assignedTo   ){
+        Ticket ticket= ticketMapper.findById(id);
+        if (ticket ==null){
+            return 0;
+        }
+        if (assignedTo != null) {//really assigend to someone.There exists a case that the ticket are not assigned.
+            User user = userMapper.findById(assignedTo);
+
+            if (user == null) {
+                return -1;//when it is assigend to someone, we need to check the validity.
+            }
+        }
+        return ticketMapper.updateAssignee(id, assignedTo);
     }
 
     public int delete(int id){

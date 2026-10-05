@@ -61,6 +61,24 @@ public class TicketController {
         return ResponseEntity.ok("Status updated");
     }
 
+    @PutMapping("/tickets/{id}/assignee")
+    public ResponseEntity<String> updateAssignee(
+            @PathVariable int id,
+            @RequestBody Integer assignedTo) {
+
+        int result = ticketService.updateAssignee(id, assignedTo);
+
+        if (result == 0) {
+            return ResponseEntity.status(404).body("Ticket not found");
+        }
+
+        if (result == -1) {
+            return ResponseEntity.status(400).body("User not found");
+        }
+
+        return ResponseEntity.ok("Assignee updated");
+    }
+
     @DeleteMapping("/tickets/{id}")
     public ResponseEntity<String> delete(@PathVariable int id){
         int rows= ticketService.delete(id);

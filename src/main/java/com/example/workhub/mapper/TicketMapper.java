@@ -54,6 +54,15 @@ public interface TicketMapper {
         @Param ("status") String status
     );
 
+
+    @Update("""
+            update tickets
+            Set
+                assigned_to=#{assignedTo}
+            where id=#{id}
+            """)
+    int updateAssignee(@Param("id") int id, @Param("assignedTo") Integer assignedTo);
+
     @Delete("""
             Delete from tickets
             where id = #{id}

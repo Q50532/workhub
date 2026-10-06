@@ -36,6 +36,10 @@ public class TicketService {
         return ticketMapper.findById(id);
     }
 
+    public List<Ticket> findByStatus(String status) {
+        return ticketMapper.findByStatus(status);
+    }
+
     public int update(int id, Ticket ticket){
         return ticketMapper.update(id, ticket);
     }
@@ -85,6 +89,19 @@ public class TicketService {
             }
         }
         return ticketMapper.updateAssignee(id, assignedTo);
+    }
+
+    public int updatePriority(int id, String priority){
+        Ticket ticket= ticketMapper.findById(id);
+        if(ticket==null){
+            return 0;
+        }
+        if (priority.equals("LOW") || priority.equals("MEDIUM") 
+            || priority.equals("HIGH") || priority.equals("URGENT")){
+        return ticketMapper.updatePriority(id, priority);}
+        
+        return -1;
+    
     }
 
     public int delete(int id){

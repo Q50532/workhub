@@ -67,4 +67,9 @@ CREATE TABLE ticket_logs (
 );
 describe ticket_logs;
 
+Alter Table tickets
+Add Column priority Varchar(30) Not Null Default 'Medium';
+
+select id, title, priority from tickets;
+
     

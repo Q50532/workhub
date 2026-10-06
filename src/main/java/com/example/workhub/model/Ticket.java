@@ -15,6 +15,7 @@ public class Ticket {
     private LocalDateTime createdAt;
     private String status;
     private String resolution;
+    private String priority;
 
     public Ticket() {
     }
@@ -111,5 +112,13 @@ public class Ticket {
 
     public void setResolution(String resolution) {
         this.resolution = resolution;
+    }
+
+    public String getPriority(){
+        return priority;
+    }
+
+    public void setPriority(String priority){
+        this.priority=priority;
     }
 }

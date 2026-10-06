@@ -23,8 +23,12 @@ public class TicketController {
         return ticketService.add(ticket);
     }
     @GetMapping("/tickets")
-    public List<Ticket> findAll(){
-        return ticketService.findAll();
+    public List<Ticket> findAll(@RequestParam(required=false) String status){
+        
+        if (status==null){
+            return ticketService.findAll();
+        }
+        return ticketService.findByStatus(status);
     }
 
     @GetMapping("/tickets/{id}")
@@ -77,6 +81,24 @@ public class TicketController {
         }
 
         return ResponseEntity.ok("Assignee updated");
+    }
+
+    @PutMapping("/tickets/{id}/priority")
+    public ResponseEntity<String> updatePriority(
+            @PathVariable int id,
+            @RequestBody String priority) {
+
+        int result = ticketService.updatePriority(id, priority);
+
+        if (result == 0) {
+            return ResponseEntity.status(404).body("Ticket not found");
+        }
+
+        if (result == -1) {
+            return ResponseEntity.status(400).body("Invalid priority");
+        }
+
+        return ResponseEntity.ok("Priority updated");
     }
 
     @DeleteMapping("/tickets/{id}")

@@ -27,6 +27,12 @@ public interface TicketMapper {
             """)
     Ticket findById(int id);
 
+    @Select("""
+        SELECT * FROM tickets
+        WHERE status = #{status}
+        """)
+    List<Ticket> findByStatus(String status);
+
     @Update("""
         update tickets
         Set
@@ -62,6 +68,14 @@ public interface TicketMapper {
             where id=#{id}
             """)
     int updateAssignee(@Param("id") int id, @Param("assignedTo") Integer assignedTo);
+
+    @Update("""
+            update tickets
+            Set
+                priority=#{priority}
+            where id=#{id}
+            """)
+    int updatePriority(@Param("id") int id,@Param("priority") String priority);
 
     @Delete("""
             Delete from tickets

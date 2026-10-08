@@ -1,14 +1,21 @@
 package com.example.workhub.model;
 
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.*;
 
 public class Ticket {
 
     private int id;
+    @NotBlank(message="title must not be blank")
+    @Size(max=150,message="title must be at most 150 characters")
     private String title;
+    @NotBlank(message = "description must not be blank")
     private String description;
+    @NotBlank(message = "category must not be blank")
+    @Size(max=50, message = "category must be at most 50 characters")
     private String category;
 
+    @Positive(message = "createdBy must be a positive user ID")
     private int createdBy;
     private Integer assignedTo;
 

@@ -2,6 +2,10 @@ package com.example.workhub.service;
 
 import org.springframework.stereotype.Service;
 
+import com.example.workhub.exception.InvalidPriorityException;
+import com.example.workhub.exception.InvalidStatusTransitionException;
+import com.example.workhub.exception.TicketNotFoundException;
+import com.example.workhub.exception.UserNotFoundException;
 import com.example.workhub.mapper.TicketLogMapper;
 import com.example.workhub.mapper.TicketMapper;
 import com.example.workhub.mapper.UserMapper;
@@ -40,52 +44,59 @@ public class TicketService {
         return ticketMapper.findByStatus(status);
     }
 
+    public List<Ticket> findByPriority(String priority) {
+        return ticketMapper.findByPriority(priority);
+    }
+
+    public List<Ticket> findByAssignedTo(Integer assignedTo) {
+        return ticketMapper.findByAssignedTo(assignedTo);
+    }
+
     public int update(int id, Ticket ticket){
         return ticketMapper.update(id, ticket);
     }
 
-    public int updateStatus(int id, String newStatus){
-        Ticket ticket= ticketMapper.findById(id);
-        if (ticket ==null){
-            return 0;
-        }
-        
-        String currentStatus=ticket.getStatus();
-        
-        if ((currentStatus.equals("OPEN")  && newStatus.equals("IN_PROGRESS"))
-        ||  (currentStatus.equals("IN_PROGRESS")
-        && newStatus.equals("RESOLVED"))
-        || (currentStatus.equals("RESOLVED")
-        && newStatus.equals("CLOSED"))){
-            int result= ticketMapper.updateStatus(id, newStatus);
-            if (result==1){
-                TicketLog ticketLog=new TicketLog();
+    public int updateStatus(int id, String newStatus) {
+    Ticket ticket = ticketMapper.findById(id);
 
-                ticketLog.setTicketId(id);
-                ticketLog.setOldStatus(currentStatus);
-                ticketLog.setNewStatus(newStatus);
-
-                ticketLogMapper.add(ticketLog);
-
-            }
-            return result;
-        }
-        return -1;
-        
-
-
+    if (ticket == null) {
+        throw new TicketNotFoundException("Ticket not found");
     }
+
+    String currentStatus = ticket.getStatus();
+
+    if ((currentStatus.equals("OPEN")&& "IN_PROGRESS".equals(newStatus))
+        || (currentStatus.equals("IN_PROGRESS") && "RESOLVED".equals(newStatus))
+        || (currentStatus.equals("RESOLVED") && "CLOSED".equals(newStatus))) {
+
+        int result = ticketMapper.updateStatus(id, newStatus);
+
+        if (result == 1) {
+            TicketLog ticketLog = new TicketLog();
+
+            ticketLog.setTicketId(id);
+            ticketLog.setOldStatus(currentStatus);
+            ticketLog.setNewStatus(newStatus);
+
+            ticketLogMapper.add(ticketLog);
+        }
+
+        return result;
+    }
+
+    throw new InvalidStatusTransitionException("Invalid status transition");
+}
 
     public int updateAssignee(int id, Integer  assignedTo   ){
         Ticket ticket= ticketMapper.findById(id);
         if (ticket ==null){
-            return 0;
+            throw new TicketNotFoundException("Ticket not found");
         }
         if (assignedTo != null) {//really assigend to someone.There exists a case that the ticket are not assigned.
             User user = userMapper.findById(assignedTo);
 
             if (user == null) {
-                return -1;//when it is assigend to someone, we need to check the validity.
+                throw new UserNotFoundException("User not found");//when it is assigend to someone, we need to check the validity.
             }
         }
         return ticketMapper.updateAssignee(id, assignedTo);
@@ -94,13 +105,14 @@ public class TicketService {
     public int updatePriority(int id, String priority){
         Ticket ticket= ticketMapper.findById(id);
         if(ticket==null){
-            return 0;
+            throw new TicketNotFoundException("Ticket not found");
+            
         }
         if (priority.equals("LOW") || priority.equals("MEDIUM") 
             || priority.equals("HIGH") || priority.equals("URGENT")){
         return ticketMapper.updatePriority(id, priority);}
         
-        return -1;
+        throw new InvalidPriorityException("Invalid priority");
     
     }
 

@@ -33,6 +33,18 @@ public interface TicketMapper {
         """)
     List<Ticket> findByStatus(String status);
 
+    @Select("""
+            Select * from tickets
+            where priority=#{priority}
+            """)
+    List<Ticket> findByPriority(String priority);
+
+    @Select("""
+        SELECT * FROM tickets
+        WHERE assigned_to = #{assignedTo}
+        """)
+    List<Ticket> findByAssignedTo(Integer assignedTo);
+
     @Update("""
         update tickets
         Set

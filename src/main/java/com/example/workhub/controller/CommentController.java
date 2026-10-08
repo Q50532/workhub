@@ -21,10 +21,8 @@ public class CommentController {
         @PathVariable int id,
         @RequestBody Comment comment) {
         comment.setTicketId(id);
-        int result=commentService.add(comment);
-        if (result==0){
-            return ResponseEntity.status(404).body("Ticket not found");
-        }
+        commentService.add(comment);
+        
         return ResponseEntity.ok("comment added");
     }
 

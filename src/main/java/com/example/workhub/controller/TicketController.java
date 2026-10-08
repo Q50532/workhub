@@ -9,6 +9,8 @@ import com.example.workhub.service.TicketService;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 @RestController
 public class TicketController {
 
@@ -19,16 +21,28 @@ public class TicketController {
     }
 
     @PostMapping("/tickets")
-    public int add(@RequestBody Ticket ticket) {
+    public int add(@Valid @RequestBody Ticket ticket) {
         return ticketService.add(ticket);
     }
+
     @GetMapping("/tickets")
-    public List<Ticket> findAll(@RequestParam(required=false) String status){
+    public List<Ticket> findAll(
+        @RequestParam(required=false) String status,
+        @RequestParam(required = false) String priority,
+        @RequestParam(required = false) Integer assignedTo){
         
-        if (status==null){
-            return ticketService.findAll();
+        if (status!=null){
+            return ticketService.findByStatus(status);
         }
-        return ticketService.findByStatus(status);
+
+        if (priority!=null){
+            return ticketService.findByPriority(priority);
+        }
+
+        if (assignedTo != null) {
+            return ticketService.findByAssignedTo(assignedTo);
+        }
+        return ticketService.findAll();
     }
 
     @GetMapping("/tickets/{id}")
@@ -55,13 +69,8 @@ public class TicketController {
             @PathVariable int id,
             @RequestBody String newStatus) {
 
-        int result= ticketService.updateStatus(id, newStatus);
-        if (result==0){
-            return ResponseEntity.status(404).body("Ticket not found");
-        }
-        if (result==-1){
-            return ResponseEntity.status(400).body("Invalid status transition");
-        }
+        ticketService.updateStatus(id, newStatus);
+        
         return ResponseEntity.ok("Status updated");
     }
 
@@ -70,15 +79,7 @@ public class TicketController {
             @PathVariable int id,
             @RequestBody Integer assignedTo) {
 
-        int result = ticketService.updateAssignee(id, assignedTo);
-
-        if (result == 0) {
-            return ResponseEntity.status(404).body("Ticket not found");
-        }
-
-        if (result == -1) {
-            return ResponseEntity.status(400).body("User not found");
-        }
+        ticketService.updateAssignee(id, assignedTo);
 
         return ResponseEntity.ok("Assignee updated");
     }
@@ -88,15 +89,9 @@ public class TicketController {
             @PathVariable int id,
             @RequestBody String priority) {
 
-        int result = ticketService.updatePriority(id, priority);
+        ticketService.updatePriority(id, priority);
 
-        if (result == 0) {
-            return ResponseEntity.status(404).body("Ticket not found");
-        }
-
-        if (result == -1) {
-            return ResponseEntity.status(400).body("Invalid priority");
-        }
+        
 
         return ResponseEntity.ok("Priority updated");
     }

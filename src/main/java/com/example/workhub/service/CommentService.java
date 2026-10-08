@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.example.workhub.exception.TicketNotFoundException;
 import com.example.workhub.mapper.CommentMapper;
 import com.example.workhub.mapper.TicketMapper;
 import com.example.workhub.model.Comment;
@@ -27,7 +28,7 @@ public class CommentService {
     public int add(Comment comment) {
         Ticket ticket= ticketMapper.findById(comment.getTicketId());
         if (ticket ==null){
-            return 0;
+            throw new TicketNotFoundException("Ticket not found");
         }
         return commentMapper.add(comment);
     }

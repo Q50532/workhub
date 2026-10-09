@@ -53,6 +53,10 @@ public class TicketService {
     }
 
     public int update(int id, Ticket ticket){
+        Ticket existTicket= ticketMapper.findById(id);
+        if (existTicket==null){
+            throw new TicketNotFoundException("Ticket not found");
+        }
         return ticketMapper.update(id, ticket);
     }
 
@@ -108,8 +112,8 @@ public class TicketService {
             throw new TicketNotFoundException("Ticket not found");
             
         }
-        if (priority.equals("LOW") || priority.equals("MEDIUM") 
-            || priority.equals("HIGH") || priority.equals("URGENT")){
+        if ("LOW".equals(priority)|| "MEDIUM".equals(priority)
+        || "HIGH".equals(priority)|| "URGENT".equals(priority)) {
         return ticketMapper.updatePriority(id, priority);}
         
         throw new InvalidPriorityException("Invalid priority");
@@ -117,6 +121,11 @@ public class TicketService {
     }
 
     public int delete(int id){
+        Ticket ticket = ticketMapper.findById(id);
+
+        if (ticket == null) {
+            throw new TicketNotFoundException("Ticket not found");
+        }
         return ticketMapper.delete(id);
     }
 }

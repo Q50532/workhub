@@ -1,75 +1,94 @@
-Create database IF NOT EXISTS workhub;
-Use workhub;
-Create Table users(
-	id Int Primary Key Auto_Increment,
-	username Varchar(50) Not Null,
-    email Varchar(100) Not Null);
-    Describe users;
-Create Table tickets(
-	id Int Primary key Auto_Increment,
-    title Varchar(150) Not Null,
-    description Text Not Null,
-    category Varchar(50) Not NUll,
-    
-    created_by Int Not NUll,
-    assigned_to Int,
-    
-    created_at Datetime Not Null,
-    status Varchar(30) Not Null Default 'OPEN',
-    resolution Text);
-    DESCRIBE tickets;
-    
-Alter Table tickets
-Add Constraint fk_ticket_creator
-Foreign Key (created_by) References users(id);
+-- WorkHub initial schema
+-- Only use this file when creating a fresh database.
+-- Do not run the whole file against an existing WorkHub database.
 
-Alter Table tickets
-Add Constraint fk_ticket_assignee
-Foreign Key (assigned_to) References users(id);
+CREATE DATABASE IF NOT EXISTS workhub;
+USE workhub;
 
-Alter Table tickets
-Modify created_at Datetime Not Null Default Current_Timestamp;
 
-Alter Table tickets
-Modify status Varchar(30) Not Null Default 'Open';
+-- =========================
+-- users
+-- =========================
 
-Insert Into users(username,email)
-Values('Tom','tom@test.com');
-select * from users;
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(100) NOT NULL
+);
 
-select* from tickets;
 
-Create Table comments(
-	id Int Primary Key Auto_increment,
-    ticket_id Int Not Null,
-    author_id Int Not Null,
-    content Text Not Null,
-    created_at Datetime Not Null Default Current_Timestamp);
-Alter Table comments
-Add constraint fk_comment_ticket_id
-Foreign Key (ticket_id) References tickets(id);
-Alter Table comments
-Add constraint fk_comment_author_id
-Foreign Key (author_id) References users(id);
+-- =========================
+-- tickets
+-- =========================
 
-Describe comments;
+CREATE TABLE tickets (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(50) NOT NULL,
+
+    created_by INT NOT NULL,
+    assigned_to INT,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    status VARCHAR(30) NOT NULL DEFAULT 'OPEN',
+    resolution TEXT,
+
+    priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+
+    CONSTRAINT fk_ticket_creator
+        FOREIGN KEY (created_by)
+        REFERENCES users(id),
+
+    CONSTRAINT fk_ticket_assignee
+        FOREIGN KEY (assigned_to)
+        REFERENCES users(id)
+);
+
+
+-- =========================
+-- comments
+-- =========================
+
+CREATE TABLE comments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+
+    ticket_id INT NOT NULL,
+    author_id INT NOT NULL,
+
+    content TEXT NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_comment_ticket
+        FOREIGN KEY (ticket_id)
+        REFERENCES tickets(id),
+
+    CONSTRAINT fk_comment_author
+        FOREIGN KEY (author_id)
+        REFERENCES users(id)
+);
+
+
+-- =========================
+-- ticket_logs
+-- =========================
 
 CREATE TABLE ticket_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,
+
     ticket_id INT NOT NULL,
+
     old_status VARCHAR(30) NOT NULL,
     new_status VARCHAR(30) NOT NULL,
+
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_ticket_log_ticket
         FOREIGN KEY (ticket_id)
         REFERENCES tickets(id)
 );
-describe ticket_logs;
-
-Alter Table tickets
-Add Column priority Varchar(30) Not Null Default 'Medium';
-
-select id, title, priority from tickets;
-
-    

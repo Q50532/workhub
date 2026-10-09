@@ -24,6 +24,8 @@ public class Ticket {
     private String resolution;
     private String priority;
 
+    private boolean deleted;
+
     public Ticket() {
     }
 
@@ -127,5 +129,13 @@ public class Ticket {
 
     public void setPriority(String priority){
         this.priority=priority;
+    }
+
+    public boolean isDeleted(){
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted){
+        this.deleted=deleted;
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 
 import com.example.workhub.model.Ticket;
 import com.example.workhub.service.TicketService;
+import com.example.workhub.model.TicketUpdateRequest;
 
 import java.util.List;
 
@@ -55,12 +56,20 @@ public class TicketController {
         return ResponseEntity.ok(ticket);
     }
 
-    @PutMapping("/tickets/{id}")
-    public ResponseEntity<String> update(@PathVariable  int id, @RequestBody Ticket ticket){
-        int rows= ticketService.update(id, ticket);
-        if (rows==0){
-            return ResponseEntity.status(404).body("Ticket not found");
-        }
+   @PutMapping("/tickets/{id}")
+    public ResponseEntity<String> update(
+            @PathVariable int id,
+            @Valid @RequestBody TicketUpdateRequest request) {
+
+        Ticket ticket = new Ticket();
+
+        ticket.setTitle(request.getTitle());
+        ticket.setDescription(request.getDescription());
+        ticket.setCategory(request.getCategory());
+        ticket.setResolution(request.getResolution());
+
+        ticketService.update(id,ticket);
+
         return ResponseEntity.ok("Ticket updated");
     }
 
@@ -98,10 +107,8 @@ public class TicketController {
 
     @DeleteMapping("/tickets/{id}")
     public ResponseEntity<String> delete(@PathVariable int id){
-        int rows= ticketService.delete(id);
-        if (rows==0){
-            return ResponseEntity.status(404).body("Ticket not found");
-        }
+        ticketService.delete(id);
+        
         return ResponseEntity.ok("Ticket deleted");
     }
 }

@@ -18,30 +18,35 @@ public interface TicketMapper {
 
     @Select("""
             Select * from tickets
+            Where deleted=FALSE
 
             """)
     List<Ticket> findAll();
 
     @Select("""
             Select * from tickets where id=#{id}
+            And deleted=FALSE
             """)
     Ticket findById(int id);
 
     @Select("""
         SELECT * FROM tickets
         WHERE status = #{status}
+            And deleted=FALSE
         """)
     List<Ticket> findByStatus(String status);
 
     @Select("""
             Select * from tickets
             where priority=#{priority}
+            And deleted=FALSE
             """)
     List<Ticket> findByPriority(String priority);
 
     @Select("""
         SELECT * FROM tickets
         WHERE assigned_to = #{assignedTo}
+            And deleted=FALSE
         """)
     List<Ticket> findByAssignedTo(Integer assignedTo);
 
@@ -50,9 +55,7 @@ public interface TicketMapper {
         Set
             title = #{ticket.title},
             description = #{ticket.description},
-            category = #{ticket.category},
-            assigned_to = #{ticket.assignedTo},
-            status = #{ticket.status},
+            category = #{ticket.category},            
             resolution = #{ticket.resolution}
         where id = #{id}
             """)
@@ -89,10 +92,12 @@ public interface TicketMapper {
             """)
     int updatePriority(@Param("id") int id,@Param("priority") String priority);
 
-    @Delete("""
-            Delete from tickets
-            where id = #{id}
-            """)
+    @Update("""
+        UPDATE tickets
+        SET deleted = TRUE
+        WHERE id = #{id}
+        AND deleted = FALSE
+        """)
     int delete(int id);
 }
 

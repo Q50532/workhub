@@ -10,7 +10,7 @@ import com.example.workhub.mapper.TicketMapper;
 import com.example.workhub.model.Comment;
 import com.example.workhub.model.Ticket;
 
-import jakarta.validation.constraints.Null;
+
 
 
 @Service
@@ -34,6 +34,12 @@ public class CommentService {
     }
 
     public List<Comment> findByTicketId(int ticketId) {
+        Ticket ticket = ticketMapper.findById(ticketId);
+
+        if (ticket == null) {
+            throw new TicketNotFoundException("Ticket not found");
+        }
+
         return commentMapper.findByTicketId(ticketId);
     }
    

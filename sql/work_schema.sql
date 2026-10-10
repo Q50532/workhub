@@ -92,3 +92,7 @@ CREATE TABLE ticket_logs (
         FOREIGN KEY (ticket_id)
         REFERENCES tickets(id)
 );
+
+CREATE INDEX idx_tickets_status_deleted
+ON tickets(status, deleted);
+

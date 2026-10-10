@@ -1,6 +1,7 @@
 package com.example.workhub.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.workhub.exception.InvalidPriorityException;
 import com.example.workhub.exception.InvalidStatusTransitionException;
@@ -60,6 +61,8 @@ public class TicketService {
         return ticketMapper.update(id, ticket);
     }
 
+
+    @Transactional 
     public int updateStatus(int id, String newStatus) {
     Ticket ticket = ticketMapper.findById(id);
 

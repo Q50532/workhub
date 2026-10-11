@@ -2,6 +2,7 @@ package com.example.workhub.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.example.workhub.exception.InvalidPriorityException;
 import com.example.workhub.exception.InvalidStatusTransitionException;
@@ -15,6 +16,10 @@ import com.example.workhub.model.TicketLog;
 import com.example.workhub.model.User;
 
 import java.util.List;
+import java.time.Duration;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class TicketService {
@@ -22,11 +27,21 @@ public class TicketService {
     private final TicketMapper ticketMapper;
     private final TicketLogMapper ticketLogMapper;
     private final UserMapper userMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final JsonMapper jsonMapper;    
 
-    public TicketService(TicketMapper ticketMapper, TicketLogMapper ticketLogMapper,UserMapper userMapper) {
+    private void deleteTicketCache(int id){
+        String key="ticket:"+id;
+        stringRedisTemplate.delete(key);
+    }
+
+    public TicketService(TicketMapper ticketMapper, TicketLogMapper ticketLogMapper,UserMapper userMapper
+        ,StringRedisTemplate stringRedisTemplate,JsonMapper jsonMapper) {
         this.ticketMapper = ticketMapper;
         this.ticketLogMapper = ticketLogMapper;
         this.userMapper=userMapper;
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.jsonMapper = jsonMapper;
     }
 
     public int add(Ticket ticket) {
@@ -37,8 +52,41 @@ public class TicketService {
         return ticketMapper.findAll();
     }
 
-    public Ticket findById(int id){
-        return ticketMapper.findById(id);
+    public Ticket findById(int id) {
+
+        String key = "ticket:" + id;
+
+        String cachedTicket = stringRedisTemplate.opsForValue().get(key);
+
+        if (cachedTicket != null) {
+            System.out.println("CACHE HIT: " + key);
+
+            try {
+                return jsonMapper.readValue(cachedTicket, Ticket.class);
+            } catch (JacksonException e) {
+                throw new RuntimeException("Failed to read Ticket from Redis", e);
+            }
+        }
+
+        System.out.println("CACHE MISS: " + key);
+
+        Ticket ticket = ticketMapper.findById(id);
+
+        if (ticket != null) {
+            try {
+                String json = jsonMapper.writeValueAsString(ticket);
+
+                stringRedisTemplate.opsForValue().set(
+                        key,
+                        json,
+                        Duration.ofSeconds(60)
+                );
+            } catch (JacksonException e) {
+                throw new RuntimeException("Failed to write Ticket to Redis", e);
+            }
+        }
+
+        return ticket;
     }
 
     public List<Ticket> findByStatus(String status) {
@@ -54,11 +102,16 @@ public class TicketService {
     }
 
     public int update(int id, Ticket ticket){
-        Ticket existTicket= ticketMapper.findById(id);
-        if (existTicket==null){
+        Ticket existingTicket= ticketMapper.findById(id);
+        if (existingTicket==null){
             throw new TicketNotFoundException("Ticket not found");
         }
-        return ticketMapper.update(id, ticket);
+
+        int result=ticketMapper.update(id, ticket);
+        if (result==1){
+            deleteTicketCache(id);
+        }
+        return result;
     }
 
 
@@ -86,6 +139,7 @@ public class TicketService {
             ticketLog.setNewStatus(newStatus);
 
             ticketLogMapper.add(ticketLog);
+            deleteTicketCache(id);
         }
 
         return result;
@@ -106,7 +160,13 @@ public class TicketService {
                 throw new UserNotFoundException("User not found");//when it is assigend to someone, we need to check the validity.
             }
         }
-        return ticketMapper.updateAssignee(id, assignedTo);
+        int result = ticketMapper.updateAssignee(id, assignedTo);
+
+        if (result == 1) {
+            deleteTicketCache(id);
+        }
+
+        return result;
     }
 
     public int updatePriority(int id, String priority){
@@ -117,7 +177,13 @@ public class TicketService {
         }
         if ("LOW".equals(priority)|| "MEDIUM".equals(priority)
         || "HIGH".equals(priority)|| "URGENT".equals(priority)) {
-        return ticketMapper.updatePriority(id, priority);}
+        int result = ticketMapper.updatePriority(id, priority);
+
+        if (result == 1) {
+            deleteTicketCache(id);
+        }
+        return result;
+        }
         
         throw new InvalidPriorityException("Invalid priority");
     
@@ -129,6 +195,14 @@ public class TicketService {
         if (ticket == null) {
             throw new TicketNotFoundException("Ticket not found");
         }
-        return ticketMapper.delete(id);
+        int result = ticketMapper.delete(id);
+
+        if (result == 1) {
+            deleteTicketCache(id);
+        }
+
+        return result;
     }
+
+    
 }

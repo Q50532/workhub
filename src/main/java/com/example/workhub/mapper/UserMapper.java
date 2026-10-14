@@ -1,7 +1,6 @@
 package com.example.workhub.mapper;
 
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import com.example.workhub.model.User;
 
@@ -13,4 +12,19 @@ public interface UserMapper {
         WHERE id = #{id}
         """)
     User findById(int id);
+
+    @Select("""
+            Select * From users
+            Where username = #{username}
+            """)
+    User findByUsername(String name);
+
+    @Update("""
+        UPDATE users
+        SET password = #{encodedPassword}
+        WHERE id = #{id}
+        """)
+    int updatePassword(int id, String encodedPassword);
+
+    
 }

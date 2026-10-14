@@ -96,3 +96,7 @@ CREATE TABLE ticket_logs (
 CREATE INDEX idx_tickets_status_deleted
 ON tickets(status, deleted);
 
+ALTER TABLE users
+ADD COLUMN password VARCHAR(255);
+DESCRIBE users;
+

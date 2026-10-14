@@ -99,6 +99,16 @@ public class TicketService {
 
     public List<Ticket> findByAssignedTo(Integer assignedTo) {
         return ticketMapper.findByAssignedTo(assignedTo);
+
+    }
+
+    public List<Ticket> findByFilters(String status,String priority,Integer assignedTo) {
+
+        return ticketMapper.findByFilters(
+                status,
+                priority,
+                assignedTo
+        );
     }
 
     public int update(int id, Ticket ticket){

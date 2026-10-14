@@ -28,22 +28,15 @@ public class TicketController {
 
     @GetMapping("/tickets")
     public List<Ticket> findAll(
-        @RequestParam(required=false) String status,
-        @RequestParam(required = false) String priority,
-        @RequestParam(required = false) Integer assignedTo){
-        
-        if (status!=null){
-            return ticketService.findByStatus(status);
-        }
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String priority,
+            @RequestParam(required = false) Integer assignedTo) {
 
-        if (priority!=null){
-            return ticketService.findByPriority(priority);
-        }
-
-        if (assignedTo != null) {
-            return ticketService.findByAssignedTo(assignedTo);
-        }
-        return ticketService.findAll();
+        return ticketService.findByFilters(
+                status,
+                priority,
+                assignedTo
+        );
     }
 
     @GetMapping("/tickets/{id}")

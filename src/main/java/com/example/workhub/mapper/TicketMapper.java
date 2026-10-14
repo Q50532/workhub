@@ -50,6 +50,31 @@ public interface TicketMapper {
         """)
     List<Ticket> findByAssignedTo(Integer assignedTo);
 
+    @Select("""
+        <script>
+        SELECT * FROM tickets
+        WHERE deleted = FALSE
+
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+
+        <if test="priority != null">
+            AND priority = #{priority}
+        </if>
+
+        <if test="assignedTo != null">
+            AND assigned_to = #{assignedTo}
+        </if>
+
+        </script>
+        """)
+    List<Ticket> findByFilters(
+        @Param("status") String status,
+        @Param("priority") String priority,
+        @Param("assignedTo") Integer assignedTo
+    );
+
     @Update("""
         update tickets
         Set

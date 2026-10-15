@@ -11,6 +11,7 @@ import com.example.workhub.exception.UserNotFoundException;
 import com.example.workhub.mapper.TicketLogMapper;
 import com.example.workhub.mapper.TicketMapper;
 import com.example.workhub.mapper.UserMapper;
+import com.example.workhub.model.PageResponse;
 import com.example.workhub.model.Ticket;
 import com.example.workhub.model.TicketLog;
 import com.example.workhub.model.User;
@@ -102,13 +103,62 @@ public class TicketService {
 
     }
 
-    public List<Ticket> findByFilters(String status,String priority,Integer assignedTo) {
-
+    public List<Ticket> findByFilters(String status,String priority,Integer assignedTo
+        ,int page, int size,String sortBy,String order
+    ) {
+        int offset=(page-1)*size;
         return ticketMapper.findByFilters(
+                status,
+                priority,
+                assignedTo,
+                size,
+                offset,
+                sortBy,
+                order
+        );
+    }
+
+    public int countByFilters(
+            String status,
+            String priority,
+            Integer assignedTo) {
+
+        return ticketMapper.countByFilters(
                 status,
                 priority,
                 assignedTo
         );
+    }
+
+    public PageResponse findTickets(
+            String status,
+            String priority,
+            Integer assignedTo,
+            int page,
+            int size,
+            String sortBy,
+            String order) {
+
+        // 1. Get tickets for the current page
+        List<Ticket> tickets = findByFilters(
+                status,
+                priority,
+                assignedTo,
+                page,
+                size,
+                sortBy,
+                order
+        );
+
+        // 2. Count all matching tickets
+        int total = countByFilters(
+                status,
+                priority,
+                assignedTo
+        );
+
+        // 3. Build the pagination response
+        return new PageResponse(tickets, total, page, size);
     }
 
     public int update(int id, Ticket ticket){

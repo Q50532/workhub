@@ -1,9 +1,11 @@
 package com.example.workhub.controller;
 
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import com.example.workhub.model.PageResponse;
 import com.example.workhub.model.Ticket;
 import com.example.workhub.service.TicketService;
 import com.example.workhub.model.TicketUpdateRequest;
@@ -27,15 +29,53 @@ public class TicketController {
     }
 
     @GetMapping("/tickets")
-    public List<Ticket> findAll(
+    public PageResponse findAll(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String priority,
-            @RequestParam(required = false) Integer assignedTo) {
+            @RequestParam(required = false) Integer assignedTo,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String order
+            ) {
+        if (page < 1 || size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid page or size"
+            );
+        }
+        
+        if (((long) page - 1) * size > Integer.MAX_VALUE) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Page offset is too large"
+            );
+        }
 
-        return ticketService.findByFilters(
+        // Validate sorting field
+        if (!sortBy.equals("id") && !sortBy.equals("createdAt")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid sortBy"
+            );
+        }
+
+        // Validate sorting direction
+        if (!order.equals("asc") && !order.equals("desc")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid order"
+            );
+        }
+
+        return ticketService.findTickets(
                 status,
                 priority,
-                assignedTo
+                assignedTo,
+                page,
+                size,
+                sortBy,
+                order
         );
     }
 

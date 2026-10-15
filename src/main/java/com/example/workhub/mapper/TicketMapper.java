@@ -67,9 +67,60 @@ public interface TicketMapper {
             AND assigned_to = #{assignedTo}
         </if>
 
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'createdAt'">
+                created_at
+            </when>
+            <otherwise>
+                id
+            </otherwise>
+        </choose>
+
+        <choose>
+            <when test="order == 'desc'">
+                DESC
+            </when>
+            <otherwise>
+                ASC
+            </otherwise>
+        </choose>
+        /* If the primary sort values are equal, sort by ID. */
+        ,id ASC 
+        
+        LIMIT #{limit} OFFSET #{offset}
         </script>
         """)
     List<Ticket> findByFilters(
+        @Param("status") String status,
+        @Param("priority") String priority,
+        @Param("assignedTo") Integer assignedTo,
+        @Param("limit") int limit,
+        @Param("offset") int offset,
+        @Param("sortBy") String sortBy,
+        @Param("order") String order
+    );
+
+    @Select("""
+        <script>
+        SELECT COUNT(*) FROM tickets
+        WHERE deleted = FALSE
+
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+
+        <if test="priority != null">
+            AND priority = #{priority}
+        </if>
+
+        <if test="assignedTo != null">
+            AND assigned_to = #{assignedTo}
+        </if>
+
+        </script>
+        """)
+    int countByFilters(
         @Param("status") String status,
         @Param("priority") String priority,
         @Param("assignedTo") Integer assignedTo

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#122659">
+  <title>Sign in · WorkHub</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="login-body">
+<div class="login-shell">
+  <aside class="login-story">
+    <div class="login-story-top"><span class="brand-mark">W</span><span>WorkHub</span></div>
+    <div class="login-story-center"><div class="story-tag">YOUR WORK, SIMPLIFIED</div><h1>让每一项工作，<br>都有清晰的进展。</h1><p>管理 Ticket、跟踪状态变更、连接你的 Java 后端。在一个地方处理重要的问题。</p><div class="story-cards"><div class="story-card"><span>01</span><strong>Track every ticket</strong><small>清晰查看每一项任务</small></div><div class="story-card story-card-alt"><span>02</span><strong>Stay in sync</strong><small>状态与日志保持同步</small></div></div></div>
+    <div class="story-footer">WORKHUB · JAVA BACKEND PROJECT</div>
+  </aside>
+  <main class="login-form-side"><div class="login-form-wrap"><div class="login-mark">W</div><div class="eyebrow">WELCOME BACK</div><h2>登录 WorkHub</h2><p class="login-desc">使用你在 WorkHub 数据库中创建的账号登录。</p><div id="loginError" class="login-alert" hidden>用户名或密码错误，请重试。</div><div id="logoutSuccess" class="login-success" hidden>你已成功退出登录。</div><form action="/login" method="post" class="login-form"><label class="field">Username<input name="username" type="text" required autocomplete="username" placeholder="输入用户名" autofocus></label><label class="field">Password<input name="password" type="password" required autocomplete="current-password" placeholder="输入密码"></label><button class="btn btn-primary login-submit" type="submit">Sign in <span aria-hidden="true">→</span></button></form><div class="login-footnote">仅限本地开发与演示 · Spring Security Form Login</div></div></main>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+document.getElementById('loginError').hidden = !params.has('error');
+document.getElementById('logoutSuccess').hidden = !params.has('logout');
+</script>
+</body>
+</html>

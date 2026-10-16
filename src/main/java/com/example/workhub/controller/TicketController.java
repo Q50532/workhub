@@ -9,8 +9,11 @@ import com.example.workhub.model.PageResponse;
 import com.example.workhub.model.Ticket;
 import com.example.workhub.service.TicketService;
 import com.example.workhub.model.TicketUpdateRequest;
+import com.example.workhub.mapper.UserMapper;
+import com.example.workhub.model.User;
 
 import java.util.List;
+import java.security.Principal;
 
 import jakarta.validation.Valid;
 
@@ -18,13 +21,27 @@ import jakarta.validation.Valid;
 public class TicketController {
 
     private final TicketService ticketService;
+    private final UserMapper userMapper;
 
-    public TicketController(TicketService ticketService) {
+    public TicketController(TicketService ticketService, UserMapper userMapper) {
         this.ticketService = ticketService;
+        this.userMapper= userMapper;
     }
 
     @PostMapping("/tickets")
-    public int add(@Valid @RequestBody Ticket ticket) {
+    public int add(@Valid @RequestBody Ticket ticket, Principal principal) {
+
+        User currentUser = userMapper.findByUsername(principal.getName());
+
+        if (currentUser == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Current user not found"
+            );
+        }
+
+        ticket.setCreatedBy(currentUser.getId());
+
         return ticketService.add(ticket);
     }
 

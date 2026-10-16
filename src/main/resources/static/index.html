@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="description" content="WorkHub Ticket Management">
+  <title>WorkHub · Ticket Management</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body class="app-body">
+<svg aria-hidden="true" class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 9h9M8 14h9M8 17h6"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 3-7 8-7s8 2 8 7"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 8l4 4-4 4M8 12h10"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.6L3 9m0-5v5h5M4 13a8 8 0 0 0 14.5 4.6L21 15m0 5v-5h-5"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 22V4m0 1c5-4 8 3 14-1v11c-6 4-9-3-14 1"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  <symbol id="i-tray" viewBox="0 0 24 24"><path d="M4 4h16l2 10v6H2v-6L4 4zM2 14h6l2 3h4l2-3h6"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m15 4 5 5-9 9H6v-5z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v7M14 11v7"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 11a8 8 0 0 1-8 8H5l-3 3V11a9 9 0 1 1 19 0z"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">W</span><div><div class="brand-name">WorkHub</div><div class="brand-meta">WORKSPACE</div></div></div>
+    <div class="nav-label">工作空间</div>
+    <nav class="side-nav" aria-label="主导航">
+      <button class="nav-link is-active" data-view="overview" type="button"><svg class="icon"><use href="#i-grid"/></svg><span>Overview</span></button>
+      <button class="nav-link" data-view="tickets" type="button"><svg class="icon"><use href="#i-list"/></svg><span>All Tickets</span></button>
+      <button class="nav-link" data-view="mine" type="button"><svg class="icon"><use href="#i-user"/></svg><span>Assigned to Me</span></button>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-note"><div class="note-title">WorkHub / Local</div><p>Java Spring Boot · MyBatis · Redis</p><div class="note-foot"><span class="online-dot"></span> Connected to your API</div></div>
+    <a href="/account.html" style="display:block; padding:12px 18px; color:#355cc7; font-weight:600;">Account Settings · 修改密码</a>
+    <div class="side-account"><span class="avatar" id="sideAvatar">?</span><div class="account-info"><strong id="sideUsername">Loading</strong><small>Signed in</small></div><button class="icon-btn sidebar-logout" id="logoutButton" aria-label="退出登录" title="退出登录"><svg class="icon"><use href="#i-out"/></svg></button></div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+  <main class="main" id="main">
+    <header class="topbar">
+      <div class="top-left"><button id="menuButton" class="icon-btn mobile-menu" aria-label="打开导航"><svg class="icon"><use href="#i-menu"/></svg></button><span class="breadcrumb">Workspace</span><svg class="icon breadcrumb-arrow"><use href="#i-chevron"/></svg><span id="breadcrumbCurrent">Overview</span></div>
+      <div class="top-actions"><span class="top-hint"><span class="online-dot"></span> Local environment</span><span class="avatar avatar-top" id="topAvatar">?</span></div>
+    </header>
+    <div class="content">
+      <section id="overviewView" class="page-view">
+        <div class="welcome-head"><div><div class="eyebrow">WORKSPACE OVERVIEW</div><h1>工作概览<span class="welcome-dot">.</span></h1><p>保持问题清晰可见，让每一项工作都有进展。</p></div><button class="btn btn-primary" id="newTicketTop"><svg class="icon"><use href="#i-plus"/></svg> New Ticket</button></div>
+        <div class="hero-card"><div><div class="hero-eyebrow">GOOD WORK STARTS WITH CLARITY</div><h2>管理工单，<br>保持协作有序。</h2><p>查看进度、更新状态、追踪每一次变更。所有数据直接来自你的 WorkHub API。</p><button id="heroBrowse" type="button" class="hero-action">查看所有工单 <svg class="icon"><use href="#i-arrow"/></svg></button></div><div class="hero-art" aria-hidden="true"><div class="shape shape-one"></div><div class="shape shape-two"></div><div class="shape shape-three"></div><div class="hero-float"><span class="mini-check">✓</span><div><strong>Stay on track</strong><small>Every issue, one place</small></div></div></div></div>
+        <div class="section-row"><div><h2>工单状态</h2><p>根据当前数据库中的工单计算</p></div><button class="text-action" id="refreshOverview" type="button"><svg class="icon"><use href="#i-refresh"/></svg> 刷新</button></div>
+        <div class="stats-grid" id="statsGrid"><div class="stat-card"><div class="stat-label">全部工单</div><div class="stat-number skeleton-text">—</div></div><div class="stat-card"><div class="stat-label">待处理</div><div class="stat-number skeleton-text">—</div></div><div class="stat-card"><div class="stat-label">处理中</div><div class="stat-number skeleton-text">—</div></div><div class="stat-card"><div class="stat-label">已解决</div><div class="stat-number skeleton-text">—</div></div></div>
+        <div class="section-row recent-head"><div><h2>最近创建的工单</h2><p>按创建时间从新到旧排序</p></div><button class="text-action" id="seeAll" type="button">查看全部 <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+        <div class="panel"><div class="table-scroll"><table class="ticket-table"><thead><tr><th>工单</th><th>状态</th><th>优先级</th><th>负责人</th><th>创建时间</th><th class="end-cell"></th></tr></thead><tbody id="recentTicketRows"><tr><td colspan="6" class="table-loading">正在读取最近的工单...</td></tr></tbody></table></div></div>
+      </section>
+      <section id="ticketsView" class="page-view" hidden>
+        <div class="page-heading"><div><div class="eyebrow" id="ticketsEyebrow">TICKET MANAGEMENT</div><h1 id="ticketsHeading">All Tickets<span class="welcome-dot">.</span></h1><p id="ticketsDescription">筛选、排序并管理 WorkHub 中的所有工单。</p></div><button class="btn btn-primary" id="newTicketList"><svg class="icon"><use href="#i-plus"/></svg> New Ticket</button></div>
+        <div class="panel tickets-panel">
+          <div class="filters-title"><div><h2>工单列表 <span class="count-chip" id="filterTotal">—</span></h2><p>使用筛选条件快速定位问题</p></div><button id="resetFilters" class="btn btn-quiet" type="button"><svg class="icon"><use href="#i-refresh"/></svg> 重置</button></div>
+          <form id="filterForm" class="filter-grid">
+            <label class="field">Status<select id="filterStatus"><option value="">All statuses</option><option value="OPEN">Open</option><option value="IN_PROGRESS">In Progress</option><option value="RESOLVED">Resolved</option><option value="CLOSED">Closed</option></select></label>
+            <label class="field">Priority<select id="filterPriority"><option value="">All priorities</option><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option><option value="URGENT">Urgent</option></select></label>
+            <label class="field" id="filterAssigneeWrap">Assignee ID<input type="number" id="filterAssignee" min="1" step="1" placeholder="All assignees"></label>
+            <label class="field">Sort by<select id="filterSort"><option value="createdAt:desc">Newest first</option><option value="createdAt:asc">Oldest first</option><option value="id:desc">ID: high to low</option><option value="id:asc">ID: low to high</option></select></label>
+            <label class="field field-size">Page size<select id="filterSize"><option value="10">10 / page</option><option value="20">20 / page</option><option value="50">50 / page</option></select></label>
+            <button class="btn btn-secondary filter-apply" type="submit"><svg class="icon"><use href="#i-filter"/></svg> 应用筛选</button>
+          </form>
+          <div class="table-scroll"><table class="ticket-table"><thead><tr><th>工单</th><th>状态</th><th>优先级</th><th>负责人</th><th>创建时间</th><th class="end-cell"></th></tr></thead><tbody id="ticketRows"><tr><td colspan="6" class="table-loading">正在读取工单...</td></tr></tbody></table></div>
+          <div class="pagination"><span id="paginationSummary">—</span><div class="pagination-controls"><button class="btn btn-outline btn-sm" id="prevPage" type="button">上一页</button><span class="page-marker" id="pageMarker">1 / 1</span><button class="btn btn-outline btn-sm" id="nextPage" type="button">下一页</button></div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="drawer-layer" id="drawerLayer" hidden><div class="drawer-scrim" id="drawerScrim"></div><section class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle"><div class="drawer-head"><div><div class="eyebrow">TICKET DETAILS</div><h2 id="drawerTitle">Ticket</h2></div><button class="icon-btn" id="closeDrawer" aria-label="关闭详情"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="drawer-scroll" id="drawerContent"><div class="drawer-loading">正在加载...</div></div></section></div>
+<div class="modal-layer" id="createLayer" hidden><div class="modal-scrim" id="createScrim"></div><section class="modal" role="dialog" aria-modal="true" aria-labelledby="createTitle"><div class="modal-head"><div><div class="eyebrow">NEW ISSUE</div><h2 id="createTitle">创建工单</h2><p>工单将由当前登录用户创建。</p></div><button id="closeCreate" class="icon-btn" aria-label="关闭创建窗口"><svg class="icon"><use href="#i-close"/></svg></button></div><form id="createForm" class="modal-body"><label class="field">Title <span class="required">*</span><input name="title" required maxlength="150" placeholder="例如：Database connection failed"></label><label class="field">Description <span class="required">*</span><textarea name="description" required rows="4" placeholder="描述问题、复现步骤或预期结果"></textarea></label><div class="form-row"><label class="field">Category <span class="required">*</span><select name="category" required><option value="" selected disabled>请选择分类</option><option value="BACKEND">Backend（后端）</option><option value="DATABASE">Database（数据库）</option><option value="FRONTEND">Frontend（前端）</option><option value="OTHER">Other（其他）</option></select></label><label class="field">Assignee ID <span class="muted">(optional)</span><input name="assignedTo" type="number" min="1" step="1" placeholder="留空表示未分配"></label></div><div class="modal-footer"><button id="cancelCreate" class="btn btn-quiet" type="button">取消</button><button id="submitCreate" class="btn btn-primary" type="submit"><svg class="icon"><use href="#i-plus"/></svg> 创建工单</button></div></form></section></div>
+<div id="toastStack" class="toast-stack" aria-live="polite"></div>
+</body>
+</html>

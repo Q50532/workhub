@@ -187,7 +187,8 @@ public class TicketService {
 
     if ((currentStatus.equals("OPEN")&& "IN_PROGRESS".equals(newStatus))
         || (currentStatus.equals("IN_PROGRESS") && "RESOLVED".equals(newStatus))
-        || (currentStatus.equals("RESOLVED") && "CLOSED".equals(newStatus))) {
+        || (currentStatus.equals("RESOLVED") && "CLOSED".equals(newStatus))
+        || (currentStatus.equals("RESOLVED") && "IN_PROGRESS".equals(newStatus))) {
 
         int result = ticketMapper.updateStatus(id, newStatus);
 

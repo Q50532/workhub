@@ -20,12 +20,24 @@ public class SecurityConfig {
             throws Exception {
 
         http
+            // Existing project setting, retained for compatibility with earlier API tests.
+            // Enable CSRF protection before any non-local deployment.
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/login.html", "/assets/**", "/favicon.svg").permitAll()
                 .anyRequest().authenticated()
             )
             .httpBasic(basic -> {})
-            .formLogin(form -> {});
+            .formLogin(form -> form
+                .loginPage("/login.html")
+                .loginProcessingUrl("/login")
+                .defaultSuccessUrl("/", true)
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutSuccessUrl("/login.html?logout")
+                .permitAll()
+            );
 
         return http.build();
     }

@@ -9,6 +9,7 @@ import java.security.Principal;
 import com.example.workhub.service.UserService;
 import com.example.workhub.mapper.UserMapper;
 import com.example.workhub.model.User;
+import com.example.workhub.model.PasswordChangeRequest;
 
 @RestController
 public class UserController {
@@ -24,7 +25,7 @@ public class UserController {
     @PutMapping("/users/{id}/password")
     public int updatePassword(
             @PathVariable int id,
-            @RequestBody String rawPassword,
+            @RequestBody PasswordChangeRequest request,
             Principal principal) {
 
         User targetUser = userMapper.findById(id);
@@ -43,6 +44,10 @@ public class UserController {
             );
         }
 
-        return userService.updatePassword(id, rawPassword);
+        return userService.updatePassword(
+                id,
+                request.getCurrentPassword(),
+                request.getRawPassword()
+        );
     }
 }

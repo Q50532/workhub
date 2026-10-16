@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>账户安全 · WorkHub</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root { color-scheme: light; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1e293b; background: #f6f8fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    header { background: #fff; border-bottom: 1px solid #e5eaf0; padding: 18px max(24px, calc((100vw - 900px) / 2)); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { font-size: 19px; font-weight: 800; letter-spacing: -.5px; }
+    a { color: #355cc7; text-decoration: none; font-weight: 600; font-size: 14px; }
+    a:hover { text-decoration: underline; }
+    main { max-width: 700px; margin: 58px auto; padding: 0 22px; }
+    .eyebrow { color: #64748b; font-size: 12px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+    h1 { margin: 10px 0 10px; font-size: 30px; letter-spacing: -.8px; }
+    p { color: #64748b; line-height: 1.6; }
+    .panel { margin-top: 26px; padding: 30px; border: 1px solid #e3e8f0; border-radius: 14px; background: #fff; box-shadow: 0 10px 36px rgba(30,41,59,.04); }
+    .user { color: #475569; font-size: 14px; margin-bottom: 24px; }
+    .field { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 7px; font-weight: 600; font-size: 14px; }
+    input { display: block; width: 100%; padding: 12px 14px; border-radius: 9px; border: 1px solid #cbd5e1; font-size: 15px; outline-offset: 2px; }
+    input:focus { border-color: #5b77e0; outline: 2px solid #dbe5ff; }
+    button { background: #365fdb; border: 0; color: #fff; padding: 12px 24px; font-weight: 700; border-radius: 9px; font-size: 14px; cursor: pointer; }
+    button:hover { background: #2e53c2; }
+    button:disabled { cursor: progress; opacity: .7; }
+    #message { margin: 18px 0 0; padding: 12px 14px; border-radius: 9px; font-size: 14px; display: none; }
+    #message.ok { display: block; color: #166534; background: #eefaf1; }
+    #message.error { display: block; color: #991b1b; background: #fef2f2; }
+    @media (max-width: 580px) { main { margin-top: 28px; } .panel { padding: 20px; } header { padding: 16px 20px; } h1 { font-size: 26px; } }
+  </style>
+</head>
+<body>
+  <header><span class="brand">WorkHub</span><a href="/">← 返回工作台</a></header>
+  <main>
+    <div class="eyebrow">Account Security</div>
+    <h1>修改密码</h1>
+    <p>验证当前密码后，为你的 WorkHub 账号设置新密码。</p>
+    <div class="panel">
+      <div id="userInfo" class="user">正在读取登录信息…</div>
+      <form id="passwordForm">
+        <div class="field"><label for="currentPassword">当前密码</label><input id="currentPassword" name="currentPassword" type="password" autocomplete="current-password" required></div>
+        <div class="field"><label for="rawPassword">新密码</label><input id="rawPassword" name="rawPassword" type="password" autocomplete="new-password" required></div>
+        <div class="field"><label for="confirmPassword">确认新密码</label><input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required></div>
+        <button id="saveButton" type="submit" disabled>保存新密码</button>
+        <div id="message" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </main>
+  <script>
+    'use strict';
+    let currentUserId = null;
+    const form = document.getElementById('passwordForm');
+    const message = document.getElementById('message');
+    const saveButton = document.getElementById('saveButton');
+    function showMessage(text, isError = false) {
+      message.textContent = text;
+      message.className = isError ? 'error' : 'ok';
+    }
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch('/api/me', {credentials: 'same-origin', headers: {Accept: 'application/json'}});
+        if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+          throw new Error('登录已失效，请返回登录页面重新登录。');
+        }
+        const user = await response.json();
+        currentUserId = user.id;
+        document.getElementById('userInfo').textContent = `当前用户：${user.username}`;
+        saveButton.disabled = false;
+      } catch (error) {
+        document.getElementById('userInfo').textContent = '无法确认当前用户';
+        showMessage(error.message || '读取登录信息失败', true);
+      }
+    }
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (currentUserId === null) return;
+      const currentPassword = document.getElementById('currentPassword').value;
+      const rawPassword = document.getElementById('rawPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      if (rawPassword !== confirmPassword) {
+        showMessage('两次输入的新密码不一致。', true);
+        return;
+      }
+      saveButton.disabled = true;
+      try {
+        const response = await fetch(`/users/${encodeURIComponent(currentUserId)}/password`, {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+          body: JSON.stringify({currentPassword, rawPassword})
+        });
+        if (!response.ok) {
+          if (response.status === 400) throw new Error('修改失败：请检查当前密码或新密码是否有效。');
+          if (response.status === 403) throw new Error('权限不足，无法修改密码。');
+          if (response.status === 401) throw new Error('登录已失效，请重新登录。');
+          throw new Error(`修改失败（HTTP ${response.status}）。`);
+        }
+        form.reset();
+        showMessage('密码修改成功。下次登录请使用新密码。');
+      } catch (error) {
+        showMessage(error.message || '请求失败，请检查网络连接。', true);
+      } finally {
+        saveButton.disabled = false;
+      }
+    });
+    loadCurrentUser();
+  </script>
+</body>
+</html>

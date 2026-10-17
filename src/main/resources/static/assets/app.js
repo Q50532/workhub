@@ -73,9 +73,27 @@ function parseApiError(response, text) {
   return `${response.status}: ${String(message).slice(0, 220)}`;
 }
 
+async function getCsrfToken() {
+    const response = await fetch('/csrf', {
+        credentials: 'same-origin'
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch CSRF token');
+    }
+
+    return await response.json();
+}
+
 async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
   headers.set('Accept', 'application/json, text/plain, */*');
+  const method = (options.method || 'GET').toUpperCase();
+
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      const csrf = await getCsrfToken();
+      headers.set(csrf.headerName, csrf.token);
+  }
   const response = await fetch(path, {credentials: 'same-origin', ...options, headers});
   const redirectedToLogin = response.redirected && new URL(response.url).pathname === '/login.html';
   if (response.status === 401 || redirectedToLogin) {
@@ -424,13 +442,26 @@ async function handleDrawerSubmit(event) {
 }
 
 async function logout() {
-  try {
-    const response = await fetch('/logout', {method: 'POST', credentials: 'same-origin'});
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    location.assign('/login.html?logout');
-  } catch (error) {
-    toast(`退出登录失败：${error.message}`, true);
-  }
+    try {
+        const csrf = await getCsrfToken();
+
+        const response = await fetch('/logout', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                [csrf.headerName]: csrf.token
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        location.assign('/login.html?logout');
+
+    } catch (error) {
+        toast(`退出登录失败：${error.message}`, true);
+    }
 }
 
 function wireEvents() {

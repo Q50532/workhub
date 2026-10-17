@@ -86,10 +86,22 @@
       }
       saveButton.disabled = true;
       try {
+         // Step 1: Get CSRF Token
+        const csrfResponse = await fetch('/csrf', {
+            credentials: 'same-origin'
+        });
+
+        if (!csrfResponse.ok) {
+            throw new Error('无法获取 CSRF Token');
+        }
+
+        const csrf = await csrfResponse.json();
+
+        // Step 2: Send password update request
         const response = await fetch(`/users/${encodeURIComponent(currentUserId)}/password`, {
           method: 'PUT',
           credentials: 'same-origin',
-          headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+          headers: {'Content-Type': 'application/json', Accept: 'application/json',[csrf.headerName]: csrf.token},
           body: JSON.stringify({currentPassword, rawPassword})
         });
         if (!response.ok) {

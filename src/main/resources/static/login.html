@@ -19,8 +19,46 @@
 </div>
 <script>
 const params = new URLSearchParams(location.search);
+
 document.getElementById('loginError').hidden = !params.has('error');
 document.getElementById('logoutSuccess').hidden = !params.has('logout');
+
+const loginForm = document.querySelector('.login-form');
+const loginButton = loginForm.querySelector('button[type="submit"]');
+
+// Wait until the CSRF token is ready.
+loginButton.disabled = true;
+
+async function setupCsrf() {
+    try {
+        const response = await fetch('/csrf', {
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch CSRF token');
+        }
+
+        const csrf = await response.json();
+
+        // Add the CSRF token to the login form.
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = csrf.parameterName;
+        input.value = csrf.token;
+
+        loginForm.appendChild(input);
+
+        loginButton.disabled = false;
+
+    } catch (error) {
+        const alert = document.getElementById('loginError');
+        alert.textContent = '无法获取安全令牌，请刷新页面重试。';
+        alert.hidden = false;
+    }
+}
+
+setupCsrf();
 </script>
 </body>
 </html>

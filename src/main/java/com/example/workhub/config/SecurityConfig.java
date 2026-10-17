@@ -22,9 +22,9 @@ public class SecurityConfig {
         http
             // Existing project setting, retained for compatibility with earlier API tests.
             // Enable CSRF protection before any non-local deployment.
-            .csrf(csrf -> csrf.disable())
+            
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login.html", "/assets/**", "/favicon.svg").permitAll()
+                .requestMatchers("/login.html", "/assets/**", "/favicon.svg","/csrf").permitAll()
                 .anyRequest().authenticated()
             )
             .httpBasic(basic -> {})

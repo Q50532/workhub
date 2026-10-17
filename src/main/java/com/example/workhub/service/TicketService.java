@@ -2,6 +2,8 @@ package com.example.workhub.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.example.workhub.exception.InvalidPriorityException;
@@ -33,7 +35,39 @@ public class TicketService {
 
     private void deleteTicketCache(int id){
         String key="ticket:"+id;
-        stringRedisTemplate.delete(key);
+        try {
+            stringRedisTemplate.delete(key);
+        } catch (RuntimeException e) {
+            System.err.println(
+                "Redis cache deletion failed: " + e.getMessage()
+            );
+        }
+    }
+    private void deleteTicketCacheAfterCommit(int id) {
+
+        if (TransactionSynchronizationManager.isActualTransactionActive()
+                && TransactionSynchronizationManager.isSynchronizationActive()) {
+
+            TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    
+                    @Override
+                    public void afterCommit() {
+                        System.out.println("AFTER COMMIT: ticket:" + id);
+                        try {
+                            deleteTicketCache(id);
+                        } catch (RuntimeException e) {
+                            System.err.println(
+                                "Failed to delete Redis cache for ticket:" + id
+                            );
+                        }
+                    }
+                }
+            );
+
+        } else {
+            deleteTicketCache(id);
+        }
     }
 
     public TicketService(TicketMapper ticketMapper, TicketLogMapper ticketLogMapper,UserMapper userMapper
@@ -56,23 +90,31 @@ public class TicketService {
     public Ticket findById(int id) {
 
         String key = "ticket:" + id;
+        String cachedTicket = null;
 
-        String cachedTicket = stringRedisTemplate.opsForValue().get(key);
+        // 1. Try reading from Redis
+        try {
+            cachedTicket = stringRedisTemplate.opsForValue().get(key);
+        } catch (RuntimeException e) {
+            System.err.println("Redis read failed: " + e.getMessage());
+        }
 
+        // 2. Return cached data if valid
         if (cachedTicket != null) {
-            System.out.println("CACHE HIT: " + key);
-
             try {
+                System.out.println("CACHE HIT: " + key);
                 return jsonMapper.readValue(cachedTicket, Ticket.class);
             } catch (JacksonException e) {
-                throw new RuntimeException("Failed to read Ticket from Redis", e);
+                System.err.println("Invalid cached Ticket: " + e.getMessage());
             }
         }
 
+        // 3. Fall back to MySQL
         System.out.println("CACHE MISS: " + key);
 
         Ticket ticket = ticketMapper.findById(id);
 
+        // 4. Try writing the result to Redis
         if (ticket != null) {
             try {
                 String json = jsonMapper.writeValueAsString(ticket);
@@ -82,8 +124,11 @@ public class TicketService {
                         json,
                         Duration.ofSeconds(60)
                 );
+
             } catch (JacksonException e) {
-                throw new RuntimeException("Failed to write Ticket to Redis", e);
+                System.err.println("Ticket JSON error: " + e.getMessage());
+            } catch (RuntimeException e) {
+                System.err.println("Redis write failed: " + e.getMessage());
             }
         }
 
@@ -200,7 +245,7 @@ public class TicketService {
             ticketLog.setNewStatus(newStatus);
 
             ticketLogMapper.add(ticketLog);
-            deleteTicketCache(id);
+            deleteTicketCacheAfterCommit(id);
         }
 
         return result;

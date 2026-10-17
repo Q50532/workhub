@@ -15,7 +15,7 @@ public class Ticket {
     @Size(max=50, message = "category must be at most 50 characters")
     private String category;
 
-    @Positive(message = "createdBy must be a positive user ID")
+    
     private int createdBy;
     private Integer assignedTo;
 

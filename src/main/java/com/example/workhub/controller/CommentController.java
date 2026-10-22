@@ -57,4 +57,55 @@ public class CommentController {
     public List<Comment> findByTicketId(@PathVariable int id) {
         return commentService.findByTicketId(id);
     }
+
+    @PutMapping("/tickets/{id}/comments/{commentId}/resolution")
+    public ResponseEntity<String> markResolution(
+            @PathVariable("id") int id,
+            @PathVariable("commentId") int commentId,
+            Principal principal) {
+
+        User currentUser = userMapper.findByUsername(
+                principal.getName()
+        );
+
+        if (currentUser == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Current user not found"
+            );
+        }
+
+        commentService.markResolution(
+                id,
+                commentId,
+                currentUser.getId()
+        );
+
+        return ResponseEntity.ok("Resolution marked");
+    }
+    @DeleteMapping("/tickets/{id}/comments/{commentId}/resolution")
+    public ResponseEntity<String> unmarkResolution(
+            @PathVariable("id") int id,
+            @PathVariable("commentId") int commentId,
+            Principal principal) {
+
+        User currentUser = userMapper.findByUsername(
+                principal.getName()
+        );
+
+        if (currentUser == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Current user not found"
+            );
+        }
+
+        commentService.unmarkResolution(
+                id,
+                commentId,
+                currentUser.getId()
+        );
+
+        return ResponseEntity.ok("Resolution unmarked");
+    }
 }

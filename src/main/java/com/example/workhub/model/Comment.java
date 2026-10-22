@@ -8,7 +8,8 @@ public class Comment {
     private int authorId;
     private String content;
     private LocalDateTime createdAt;
-    
+    private boolean resolution;
+
     public Comment(){
 
     }
@@ -52,6 +53,14 @@ public class Comment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isResolution() {
+        return resolution;
+    }
+
+    public void setResolution(boolean resolution) {
+        this.resolution = resolution;
     }
 
     

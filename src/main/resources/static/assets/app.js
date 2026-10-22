@@ -313,11 +313,56 @@ function renderDrawer() {
     <div class="detail-divider"></div>`;
   const tabs = `<div class="detail-tabs"><button data-tab="comments" class="detail-tab ${state.detailTab === 'comments' ? 'is-active' : ''}" type="button">Comments (${Array.isArray(state.comments) ? state.comments.length : 0})</button><button data-tab="logs" class="detail-tab ${state.detailTab === 'logs' ? 'is-active' : ''}" type="button">Status history (${Array.isArray(state.logs) ? state.logs.length : 0})</button></div>`;
   let body;
-  if (state.detailTab === 'comments') {
+ if (state.detailTab === 'comments') {
     const items = Array.isArray(state.comments) ? state.comments : [];
-    body = state.commentsError ? `<p class="no-results">${esc(state.commentsError)}</p>` : items.length ? items.map(c => `<div class="note-card"><div class="note-card-top"><strong>User #${esc(c.authorId)}</strong><small>${localDate(c.createdAt)}</small></div><p>${esc(c.content)}</p></div>`).join('') : '<div class="no-results">还没有评论，添加第一条讨论。</div>';
-    body += `<form id="commentForm" class="edit-form" style="margin-top:18px"><label class="field">Add comment<textarea name="content" rows="3" required maxlength="5000" placeholder="写下处理建议或工作进展..."></textarea></label><button type="submit" class="btn btn-secondary">${icon('message')} 发送评论</button></form>`;
-  } else {
+
+    // Only the ticket creator can manage Resolution
+    const canManageResolution =
+        Number(ticket.createdBy) === Number(state.user.id);
+
+    body = state.commentsError
+        ? `<p class="no-results">${esc(state.commentsError)}</p>`
+        : items.length
+            ? items.map(c => `
+                <div class="note-card">
+                    <div class="note-card-top">
+                        <strong>User #${esc(c.authorId)}</strong>
+                        <small>${localDate(c.createdAt)}</small>
+                    </div>
+
+                    <p>${esc(c.content)}</p>
+
+                    ${c.resolution
+                        ? `<span class="badge-status status-resolved">
+                               Resolution
+                           </span>`
+                        : ''
+                    }
+
+                    ${canManageResolution && c.resolution
+                        ? `<button type="button"
+                              class="btn btn-outline"
+                              data-action="unmarkResolution"
+                              data-comment-id="${esc(c.id)}">
+                              Unmark Resolution
+                          </button>`
+                        : ''
+                    }
+
+                    ${canManageResolution && !c.resolution
+                        ? `<button type="button"
+                               class="btn btn-outline"
+                               data-action="markResolution"
+                               data-comment-id="${esc(c.id)}">
+                               Mark as Resolution
+                           </button>`
+                        : ''
+                    }
+                </div>
+            `).join('')
+            : '<div class="no-results">还没有评论，添加第一条讨论。</div>';
+
+    body += `<form id="commentForm" class="edit-form" style="margin-top:18px"><label class="field">Add comment<textarea name="content" rows="3" required maxlength="5000" placeholder="写下处理建议或工作进展..."></textarea></label><button type="submit" class="btn btn-secondary">${icon('message')} 发送评论</button></form>`;  } else {
     const items = Array.isArray(state.logs) ? state.logs : [];
     body = state.logsError ? `<p class="no-results">${esc(state.logsError)}</p>` : items.length ? items.map(log => `<div class="note-card"><div class="note-card-top"><strong>${esc(statusText[log.oldStatus] || log.oldStatus)} → ${esc(statusText[log.newStatus] || log.newStatus)}</strong><small>${localDate(log.createdAt)}</small></div></div>`).join('') : '<div class="no-results">暂无状态变更记录。</div>';
   }
@@ -403,6 +448,32 @@ async function handleDrawerAction(event) {
       );
       break;
     }
+    case 'markResolution': {
+      const commentId = Number(button.dataset.commentId);
+
+      await doMutation(
+          () => api(
+              `/tickets/${id}/comments/${commentId}/resolution`,
+              { method: 'PUT' }
+          ),
+          'Resolution marked'
+      );
+
+      break;
+  }
+    case 'unmarkResolution': {
+      const commentId = Number(button.dataset.commentId);
+
+      await doMutation(
+          () => api(
+              `/tickets/${id}/comments/${commentId}/resolution`,
+              { method: 'DELETE' }
+          ),
+          'Resolution unmarked'
+      );
+
+      break;
+  }
     case 'delete':
       if (confirm(`确认删除 Ticket #${id}？该操作会将工单标记为已删除。`)) {
         await doMutation(() => api(`/tickets/${id}`, {method: 'DELETE'}), '工单已删除', {close: true});

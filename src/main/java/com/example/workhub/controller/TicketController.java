@@ -12,7 +12,7 @@ import com.example.workhub.model.TicketUpdateRequest;
 import com.example.workhub.mapper.UserMapper;
 import com.example.workhub.model.User;
 
-import java.util.List;
+
 import java.security.Principal;
 
 import jakarta.validation.Valid;

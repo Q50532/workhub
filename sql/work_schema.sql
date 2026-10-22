@@ -100,3 +100,33 @@ ALTER TABLE users
 ADD COLUMN password VARCHAR(255);
 DESCRIBE users;
 
+SHOW CREATE TABLE comments;
+
+ALTER TABLE comments
+ADD COLUMN is_resolution TINYINT(1) NOT NULL DEFAULT 0;
+
+SELECT id, ticket_id, content, is_resolution
+FROM comments
+ORDER BY ticket_id, id;
+
+Show Columns From users;
+
+select * from users;
+
+SELECT
+    t.id AS ticket_id,
+    t.created_by,
+    c.id AS comment_id
+FROM tickets t
+JOIN comments c ON t.id = c.ticket_id
+WHERE t.created_by = 2;
+
+SELECT id, title, created_by
+FROM tickets
+WHERE created_by = 2;
+
+UPDATE users
+SET password = '$2y$10$d1hDfkXwFFyRiy83hqYZ0uBeEcZPHc0Gyfk9hn1beuI2eObfaY19i'
+WHERE id = 2
+  AND username = 'Alice'
+  AND password IS NULL;

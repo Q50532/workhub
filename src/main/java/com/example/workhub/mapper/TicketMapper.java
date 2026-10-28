@@ -14,6 +14,7 @@ public interface TicketMapper {
         VALUES
             (#{title}, #{description}, #{category}, #{createdBy}, #{assignedTo})
         """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
     int add(Ticket ticket);
 
     @Select("""
@@ -67,6 +68,10 @@ public interface TicketMapper {
             AND assigned_to = #{assignedTo}
         </if>
 
+        <if test="viewerId != null">
+            AND (created_by = #{viewerId} OR assigned_to = #{viewerId})
+        </if>
+
         ORDER BY
         <choose>
             <when test="sortBy == 'createdAt'">
@@ -98,7 +103,8 @@ public interface TicketMapper {
         @Param("limit") int limit,
         @Param("offset") int offset,
         @Param("sortBy") String sortBy,
-        @Param("order") String order
+        @Param("order") String order,
+        @Param("viewerId") Integer viewerId
     );
 
     @Select("""
@@ -118,12 +124,17 @@ public interface TicketMapper {
             AND assigned_to = #{assignedTo}
         </if>
 
+        <if test="viewerId != null">
+            AND (created_by = #{viewerId} OR assigned_to = #{viewerId})
+        </if>
+
         </script>
         """)
     int countByFilters(
         @Param("status") String status,
         @Param("priority") String priority,
-        @Param("assignedTo") Integer assignedTo
+        @Param("assignedTo") Integer assignedTo,
+        @Param("viewerId") Integer viewerId
     );
 
     @Update("""
@@ -132,48 +143,59 @@ public interface TicketMapper {
             title = #{ticket.title},
             description = #{ticket.description},
             category = #{ticket.category},            
-            resolution = #{ticket.resolution}
-        where id = #{id}
+            resolution = #{ticket.resolution},
+            version = version + 1
+        where id = #{id} AND deleted = FALSE
+          AND version = #{version}
             """)
     int update(
         @Param ("id") int id,
-        @Param ("ticket") Ticket ticket
+        @Param ("ticket") Ticket ticket,
+        @Param("version") int version
     );
 
     @Update("""
             update tickets
             Set
-                status=#{status}
-            where id=#{id}
+                status=#{status},
+                version=version+1
+            where id=#{id} AND deleted=FALSE
+              AND status=#{expectedStatus} AND version=#{version}
             """)
     int updateStatus(
         @Param ("id") int id,
-        @Param ("status") String status
+        @Param ("status") String status,
+        @Param("expectedStatus") String expectedStatus,
+        @Param("version") int version
     );
 
 
     @Update("""
             update tickets
             Set
-                assigned_to=#{assignedTo}
-            where id=#{id}
+                assigned_to=#{assignedTo},
+                version=version+1
+            where id=#{id} AND deleted=FALSE AND version=#{version}
             """)
-    int updateAssignee(@Param("id") int id, @Param("assignedTo") Integer assignedTo);
+    int updateAssignee(@Param("id") int id, @Param("assignedTo") Integer assignedTo,
+                       @Param("version") int version);
 
     @Update("""
             update tickets
             Set
-                priority=#{priority}
-            where id=#{id}
+                priority=#{priority},
+                version=version+1
+            where id=#{id} AND deleted=FALSE AND version=#{version}
             """)
-    int updatePriority(@Param("id") int id,@Param("priority") String priority);
+    int updatePriority(@Param("id") int id,@Param("priority") String priority,
+                       @Param("version") int version);
 
     @Update("""
         UPDATE tickets
-        SET deleted = TRUE
+        SET deleted = TRUE, version = version + 1
         WHERE id = #{id}
-        AND deleted = FALSE
+        AND deleted = FALSE AND version = #{version}
         """)
-    int delete(int id);
+    int delete(@Param("id") int id, @Param("version") int version);
 }
 

@@ -62,7 +62,7 @@ class TicketServiceTest {
         Mockito.when(ticketMapper.findById(1))
                 .thenReturn(ticket);
 
-        Mockito.when(ticketMapper.updateStatus(1, newStatus))
+        Mockito.when(ticketMapper.updateStatus(1, newStatus, currentStatus, 0))
                 .thenReturn(1);
 
         int result = ticketService.updateStatus(1, newStatus);
@@ -70,13 +70,25 @@ class TicketServiceTest {
         assertEquals(1, result);
 
         Mockito.verify(ticketMapper)
-                .updateStatus(1, newStatus);
+                .updateStatus(1, newStatus, currentStatus, 0);
 
         Mockito.verify(ticketLogMapper)
                 .add(Mockito.any(TicketLog.class));
 
         Mockito.verify(redisTemplate)
                 .delete("ticket:1");
+    }
+
+    @Test
+    void staleVersionMustNotWriteHistory() {
+        Ticket ticket = new Ticket();
+        ticket.setStatus("OPEN");
+        ticket.setVersion(4);
+        Mockito.when(ticketMapper.findById(1)).thenReturn(ticket);
+        Mockito.when(ticketMapper.updateStatus(1, "IN_PROGRESS", "OPEN", 4)).thenReturn(0);
+        assertThrows(com.example.workhub.exception.TicketConflictException.class,
+                () -> ticketService.updateStatus(1, "IN_PROGRESS"));
+        Mockito.verify(ticketLogMapper, Mockito.never()).add(Mockito.any(TicketLog.class));
     }
 
     @Test
@@ -93,7 +105,7 @@ class TicketServiceTest {
         );
 
         Mockito.verify(ticketMapper, Mockito.never())
-                .updateStatus(1, "CLOSED");
+                .updateStatus(Mockito.eq(1), Mockito.eq("CLOSED"), Mockito.anyString(), Mockito.anyInt());
     }
 
     @Test
@@ -107,6 +119,6 @@ class TicketServiceTest {
         );
 
         Mockito.verify(ticketMapper, Mockito.never())
-                .updateStatus(999, "IN_PROGRESS");
+                .updateStatus(Mockito.eq(999), Mockito.eq("IN_PROGRESS"), Mockito.anyString(), Mockito.anyInt());
     }
 }

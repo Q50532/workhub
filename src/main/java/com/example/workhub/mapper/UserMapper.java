@@ -6,6 +6,9 @@ import com.example.workhub.model.User;
 
 @Mapper
 public interface UserMapper {
+    @Select("SELECT id FROM users WHERE role = 'MANAGER'")
+    java.util.List<Integer> findManagerIds();
+
 
     @Select("""
         SELECT * FROM users

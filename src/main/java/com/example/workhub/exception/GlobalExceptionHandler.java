@@ -8,6 +8,12 @@ import org.springframework.web.bind.annotation.*;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(TicketConflictException.class)
+    public ResponseEntity<String> handleTicketConflict(TicketConflictException exception) {
+        return ResponseEntity.status(409).body(exception.getMessage());
+    }
+
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<String> handleValidationException(
             MethodArgumentNotValidException exception) {

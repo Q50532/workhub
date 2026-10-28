@@ -8,8 +8,10 @@ import org.springframework.http.ResponseEntity;
 import com.example.workhub.model.PageResponse;
 import com.example.workhub.model.Ticket;
 import com.example.workhub.service.TicketService;
+import com.example.workhub.service.TicketAccessService;
 import com.example.workhub.model.TicketUpdateRequest;
 import com.example.workhub.mapper.UserMapper;
+import com.example.workhub.idempotency.TicketCreationService;
 import com.example.workhub.model.User;
 
 
@@ -22,14 +24,21 @@ public class TicketController {
 
     private final TicketService ticketService;
     private final UserMapper userMapper;
+    private final TicketAccessService access;
+    private final TicketCreationService creator;
 
-    public TicketController(TicketService ticketService, UserMapper userMapper) {
+    public TicketController(TicketService ticketService, UserMapper userMapper, TicketAccessService access,
+                            TicketCreationService creator) {
         this.ticketService = ticketService;
         this.userMapper= userMapper;
+        this.access = access;
+        this.creator = creator;
     }
 
     @PostMapping("/tickets")
-    public int add(@Valid @RequestBody Ticket ticket, Principal principal) {
+    public int add(@Valid @RequestBody Ticket ticket,
+                   @RequestHeader(name = "Idempotency-Key", required = false) String requestKey,
+                   Principal principal) {
 
         User currentUser = userMapper.findByUsername(principal.getName());
 
@@ -41,8 +50,11 @@ public class TicketController {
         }
 
         ticket.setCreatedBy(currentUser.getId());
-
-        return ticketService.add(ticket);
+        if (!access.isManager(currentUser)) {
+            // Assignment is a manager-only operation, including on creation.
+            ticket.setAssignedTo(null);
+        }
+        return creator.create(ticket, requestKey);
     }
 
     @GetMapping("/tickets")
@@ -53,7 +65,8 @@ public class TicketController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String order
+            @RequestParam(defaultValue = "asc") String order,
+            Principal principal
             ) {
         if (page < 1 || size < 1 || size > 100) {
             throw new ResponseStatusException(
@@ -85,20 +98,17 @@ public class TicketController {
             );
         }
 
+        User viewer = access.currentUser(principal);
         return ticketService.findTickets(
-                status,
-                priority,
-                assignedTo,
-                page,
-                size,
-                sortBy,
-                order
+                status, priority, assignedTo, page, size, sortBy, order,
+                access.isManager(viewer) ? null : viewer.getId()
         );
     }
 
     @GetMapping("/tickets/{id}")
-    public ResponseEntity<?> findById(@PathVariable int id){
-        Ticket ticket= ticketService.findById(id);
+    public ResponseEntity<?> findById(@PathVariable int id, Principal principal){
+        access.visibleTicket(id, principal);
+        Ticket ticket = ticketService.findById(id);
         if (ticket==null){
             return ResponseEntity.status(404).body("Ticket not found");
 
@@ -106,10 +116,32 @@ public class TicketController {
         return ResponseEntity.ok(ticket);
     }
 
-   @PutMapping("/tickets/{id}")
+    /** HTTP writes must use the version the client previously read. */
+    private int expectedVersion(String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.PRECONDITION_REQUIRED,
+                    "If-Match version required");
+        }
+        String value = ifMatch.trim();
+        if (value.length() > 1 && value.startsWith("\"") && value.endsWith("\"")) {
+            value = value.substring(1, value.length() - 1);
+        }
+        try {
+            int version = Integer.parseInt(value);
+            if (version < 0) throw new NumberFormatException("negative");
+            return version;
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid If-Match version");
+        }
+    }
+
+    @PutMapping("/tickets/{id}")
     public ResponseEntity<String> update(
             @PathVariable int id,
-            @Valid @RequestBody TicketUpdateRequest request) {
+            @Valid @RequestBody TicketUpdateRequest request,
+            @RequestHeader(name = "If-Match", required = false) String ifMatch,
+            Principal principal) {
+        access.requireCreatorOrManager(id, principal);
 
         Ticket ticket = new Ticket();
 
@@ -118,7 +150,8 @@ public class TicketController {
         ticket.setCategory(request.getCategory());
         ticket.setResolution(request.getResolution());
 
-        ticketService.update(id,ticket);
+        ticketService.update(id, ticket, expectedVersion(ifMatch),
+                access.currentUser(principal).getId());
 
         return ResponseEntity.ok("Ticket updated");
     }
@@ -126,9 +159,13 @@ public class TicketController {
     @PutMapping("/tickets/{id}/status")
     public ResponseEntity<String> updateStatus(
             @PathVariable int id,
-            @RequestBody String newStatus) {
+            @RequestBody String newStatus,
+            @RequestHeader(name = "If-Match", required = false) String ifMatch,
+            Principal principal) {
+        access.requireAssigneeOrManager(id, principal);
 
-        ticketService.updateStatus(id, newStatus);
+        ticketService.updateStatus(id, newStatus, expectedVersion(ifMatch),
+                access.currentUser(principal).getId());
         
         return ResponseEntity.ok("Status updated");
     }
@@ -136,19 +173,38 @@ public class TicketController {
     @PutMapping("/tickets/{id}/assignee")
     public ResponseEntity<String> updateAssignee(
             @PathVariable int id,
-            @RequestBody Integer assignedTo) {
+            @RequestBody Integer assignedTo,
+            @RequestHeader(name = "If-Match", required = false) String ifMatch,
+            Principal principal) {
+        access.requireManager(principal);
 
-        ticketService.updateAssignee(id, assignedTo);
+        ticketService.updateAssignee(id, assignedTo, expectedVersion(ifMatch),
+                access.currentUser(principal).getId());
 
         return ResponseEntity.ok("Assignee updated");
+    }
+
+    @DeleteMapping("/tickets/{id}/assignee")
+    public ResponseEntity<String> unassign(
+            @PathVariable int id,
+            @RequestHeader(name = "If-Match", required = false) String ifMatch,
+            Principal principal) {
+        access.requireManager(principal);
+        ticketService.updateAssignee(id, null, expectedVersion(ifMatch),
+                access.currentUser(principal).getId());
+        return ResponseEntity.ok("Ticket unassigned");
     }
 
     @PutMapping("/tickets/{id}/priority")
     public ResponseEntity<String> updatePriority(
             @PathVariable int id,
-            @RequestBody String priority) {
+            @RequestBody String priority,
+            @RequestHeader(name = "If-Match", required = false) String ifMatch,
+            Principal principal) {
+        access.requireManager(principal);
 
-        ticketService.updatePriority(id, priority);
+        ticketService.updatePriority(id, priority, expectedVersion(ifMatch),
+                access.currentUser(principal).getId());
 
         
 
@@ -156,8 +212,12 @@ public class TicketController {
     }
 
     @DeleteMapping("/tickets/{id}")
-    public ResponseEntity<String> delete(@PathVariable int id){
-        ticketService.delete(id);
+    public ResponseEntity<String> delete(@PathVariable int id,
+            @RequestHeader(name = "If-Match", required = false) String ifMatch,
+            Principal principal){
+        access.requireCreatorOrManager(id, principal);
+        ticketService.delete(id, expectedVersion(ifMatch),
+                access.currentUser(principal).getId());
         
         return ResponseEntity.ok("Ticket deleted");
     }

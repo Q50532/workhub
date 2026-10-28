@@ -32,3 +32,16 @@ build/
 ### VS Code ###
 .vscode/
 .env
+
+
+# Local secrets and backups
+.env
+.env.*
+!.env.example
+*backup*.sql
+dump_*.sql
+*.pem
+*.key
+*.p12
+*.jks
+*.log

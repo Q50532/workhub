@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.workhub.model.Comment;
 import com.example.workhub.model.User;
 import com.example.workhub.service.CommentService;
+import com.example.workhub.service.TicketAccessService;
 import com.example.workhub.mapper.UserMapper;
 
 import java.security.Principal;
@@ -19,13 +20,15 @@ public class CommentController {
 
     private final CommentService commentService;
     private final UserMapper userMapper;
+    private final TicketAccessService access;
 
     public CommentController(
             CommentService commentService,
-            UserMapper userMapper) {
+            UserMapper userMapper, TicketAccessService access) {
 
         this.commentService = commentService;
         this.userMapper = userMapper;
+        this.access = access;
     }
 
     @PostMapping("/tickets/{id}/comments")
@@ -45,6 +48,7 @@ public class CommentController {
             );
         }
 
+        access.visibleTicket(id, principal);
         comment.setTicketId(id);
         comment.setAuthorId(currentUser.getId());
 
@@ -54,7 +58,8 @@ public class CommentController {
     }
 
     @GetMapping("/tickets/{id}/comments")
-    public List<Comment> findByTicketId(@PathVariable int id) {
+    public List<Comment> findByTicketId(@PathVariable int id, Principal principal) {
+        access.visibleTicket(id, principal);
         return commentService.findByTicketId(id);
     }
 
@@ -75,6 +80,7 @@ public class CommentController {
             );
         }
 
+        access.visibleTicket(id, principal);
         commentService.markResolution(
                 id,
                 commentId,
@@ -100,6 +106,7 @@ public class CommentController {
             );
         }
 
+        access.visibleTicket(id, principal);
         commentService.unmarkResolution(
                 id,
                 commentId,

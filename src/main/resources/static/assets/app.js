@@ -141,9 +141,10 @@ function tableRows(items) {
 
 function setPageHeading() {
   const mine = state.view === 'mine';
-  $('ticketsHeading').innerHTML = mine ? 'Assigned to Me<span class="welcome-dot">.</span>' : 'All Tickets<span class="welcome-dot">.</span>';
+  const title = mine ? 'Assigned to Me' : (state.user?.role === 'MANAGER' ? 'All Tickets' : 'My Tickets');
+  $('ticketsHeading').innerHTML = `${title}<span class="welcome-dot">.</span>`;
   $('ticketsEyebrow').textContent = mine ? 'PERSONAL WORK QUEUE' : 'TICKET MANAGEMENT';
-  $('ticketsDescription').textContent = mine ? `仅显示分配给 ${state.user.username}（User #${state.user.id}）的工单。` : '筛选、排序并管理 WorkHub 中的所有工单。';
+  $('ticketsDescription').textContent = mine ? `仅显示分配给 ${state.user.username}（User #${state.user.id}）的工单。` : (state.user?.role === 'MANAGER' ? '筛选、排序并管理全部工单。' : '仅显示自己创建或被分配的工单。');
   $('filterAssigneeWrap').hidden = mine;
 }
 
@@ -283,7 +284,11 @@ function renderDrawer() {
   const ticket = state.activeTicket;
   if (!ticket) return;
   $('drawerTitle').textContent = `Ticket #${ticket.id}`;
+  const isManager = state.user?.role === 'MANAGER';
+  const canEdit = isManager || Number(ticket.createdBy) === Number(state.user.id);
+  const canAdvance = isManager || Number(ticket.assignedTo) === Number(state.user.id);
   if (state.editing) {
+    if (!canEdit) { state.editing = false; return renderDrawer(); }
     $('drawerContent').innerHTML = `<form id="editTicketForm" class="edit-form">
       <label class="field">Title <span class="required">*</span><input name="title" maxlength="150" required value="${esc(ticket.title)}"></label>
       <label class="field">Description <span class="required">*</span><textarea name="description" rows="5" required>${esc(ticket.description)}</textarea></label>
@@ -306,10 +311,10 @@ function renderDrawer() {
       <div class="detail-item"><small>Created at</small><strong>${localDate(ticket.createdAt)}</strong></div>
       <div class="detail-item" style="grid-column:1/-1"><small>Resolution</small><strong>${ticket.resolution ? esc(ticket.resolution) : 'Not provided'}</strong></div>
     </div>
-    <div class="detail-actions"><button data-action="edit" class="btn btn-primary" type="button">${icon('edit')} 编辑内容</button>${next ? `<button data-action="advance" class="btn btn-secondary" type="button">状态 → ${esc(statusText[next])}</button>` : ''}${ticket.status === 'RESOLVED' ? `<button data-action="reopen" class="btn btn-secondary" type="button">退回处理中</button>` : ''}<button data-action="delete" class="btn btn-danger" type="button">${icon('trash')} 删除</button></div>
-    <div class="detail-section-title">Quick updates</div>
+    <div class="detail-actions">${canEdit ? `<button data-action="edit" class="btn btn-primary" type="button">${icon('edit')} 编辑内容</button>` : ''}${canAdvance && next ? `<button data-action="advance" class="btn btn-secondary" type="button">状态 → ${esc(statusText[next])}</button>` : ''}${canAdvance && ticket.status === 'RESOLVED' ? `<button data-action="reopen" class="btn btn-secondary" type="button">退回处理中</button>` : ''}${canEdit ? `<button data-action="delete" class="btn btn-danger" type="button">${icon('trash')} 删除</button>` : ''}</div>
+    ${isManager ? `<div class="detail-section-title">Manager updates</div>
     <form id="priorityForm" class="inline-form"><label class="field">Priority<select name="priority">${priorityOptions}</select></label><button class="btn btn-outline" type="submit">更新优先级</button></form>
-    <form id="assigneeForm" class="inline-form"><label class="field">Assign to user ID<input name="assignedTo" type="number" min="1" step="1" required value="${ticket.assignedTo ?? ''}" placeholder="例如 1"></label><button class="btn btn-outline" type="submit">更新负责人</button></form>
+    <form id="assigneeForm" class="inline-form"><label class="field">Assign to user ID<input name="assignedTo" type="number" min="1" step="1" required value="${ticket.assignedTo ?? ''}" placeholder="例如 1"></label><button class="btn btn-outline" type="submit">更新负责人</button></form>${ticket.assignedTo != null ? `<button class="btn btn-quiet" type="button" data-action="unassign">取消分配</button>` : ''}` : ''}
     <div class="detail-divider"></div>`;
   const tabs = `<div class="detail-tabs"><button data-tab="comments" class="detail-tab ${state.detailTab === 'comments' ? 'is-active' : ''}" type="button">Comments (${Array.isArray(state.comments) ? state.comments.length : 0})</button><button data-tab="logs" class="detail-tab ${state.detailTab === 'logs' ? 'is-active' : ''}" type="button">Status history (${Array.isArray(state.logs) ? state.logs.length : 0})</button></div>`;
   let body;
@@ -369,6 +374,10 @@ function renderDrawer() {
   $('drawerContent').innerHTML = overview + tabs + body;
 }
 
+function versionHeader(ticket) {
+  return {'If-Match': String(ticket.version)};
+}
+
 async function doMutation(request, successMessage, {refreshDetail = true, close = false} = {}) {
   if (state.busy) return;
   state.busy = true;
@@ -401,14 +410,23 @@ async function createTicket(event) {
     description: String(fields.get('description') || '').trim(),
     category: String(fields.get('category') || '').trim(),
     createdBy: state.user.id,
-    assignedTo
+    assignedTo: state.user?.role === 'MANAGER' ? assignedTo : null
   };
   if (!payload.title || !payload.description || !payload.category) return toast('请填写所有必填项', true);
   if (assignedTo !== null && (!Number.isInteger(assignedTo) || assignedTo <= 0)) return toast('负责人 ID 必须是正整数', true);
   state.busy = true;
   $('submitCreate').disabled = true;
   try {
-    await api('/tickets', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+    // Keep one idempotency key for the same form until success; preserve on retry.
+    if (!form.dataset.idempotencyKey) {
+      form.dataset.idempotencyKey = (globalThis.crypto?.randomUUID?.() ||
+          `wh-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    }
+    await api('/tickets', {method: 'POST', headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': form.dataset.idempotencyKey
+    }, body: JSON.stringify(payload)});
+    delete form.dataset.idempotencyKey;
     closeCreate();
     toast('工单创建成功');
     $('filterForm').reset();
@@ -427,21 +445,22 @@ async function handleDrawerAction(event) {
   if (tabButton) {state.detailTab = tabButton.dataset.tab; renderDrawer(); return;}
   const button = event.target.closest('[data-action]');
   if (!button || !state.activeTicket) return;
-  const id = state.activeTicket.id;
+  const ticket = state.activeTicket;
+  const id = ticket.id;
   switch (button.dataset.action) {
     case 'edit': state.editing = true; renderDrawer(); break;
     case 'cancelEdit': state.editing = false; renderDrawer(); break;
     case 'advance': {
       const target = nextStatus[state.activeTicket.status];
       if (!target) return;
-      await doMutation(() => api(`/tickets/${id}/status`, {method: 'PUT', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: target}), `状态已更新为 ${statusText[target]}`);
+      await doMutation(() => api(`/tickets/${id}/status`, {method: 'PUT', headers: {'Content-Type': 'text/plain;charset=UTF-8', ...versionHeader(ticket)}, body: target}), `状态已更新为 ${statusText[target]}`);
       break;
     }
     case 'reopen': {
       await doMutation(
           () => api(`/tickets/${id}/status`, {
               method: 'PUT',
-              headers: {'Content-Type': 'text/plain;charset=UTF-8'},
+              headers: {'Content-Type': 'text/plain;charset=UTF-8', ...versionHeader(ticket)},
               body: 'IN_PROGRESS'
           }),
           '工单已退回处理中'
@@ -454,7 +473,7 @@ async function handleDrawerAction(event) {
       await doMutation(
           () => api(
               `/tickets/${id}/comments/${commentId}/resolution`,
-              { method: 'PUT' }
+              { method: 'PUT', headers: versionHeader(ticket) }
           ),
           'Resolution marked'
       );
@@ -467,16 +486,19 @@ async function handleDrawerAction(event) {
       await doMutation(
           () => api(
               `/tickets/${id}/comments/${commentId}/resolution`,
-              { method: 'DELETE' }
+              { method: 'DELETE', headers: versionHeader(ticket) }
           ),
           'Resolution unmarked'
       );
 
       break;
   }
+    case 'unassign':
+      await doMutation(() => api(`/tickets/${id}/assignee`, {method: 'DELETE', headers: versionHeader(ticket)}), '工单已取消分配');
+      break;
     case 'delete':
       if (confirm(`确认删除 Ticket #${id}？该操作会将工单标记为已删除。`)) {
-        await doMutation(() => api(`/tickets/${id}`, {method: 'DELETE'}), '工单已删除', {close: true});
+        await doMutation(() => api(`/tickets/${id}`, {method: 'DELETE', headers: versionHeader(ticket)}), '工单已删除', {close: true});
       }
       break;
   }
@@ -496,14 +518,14 @@ async function handleDrawerSubmit(event) {
       resolution: String(data.get('resolution') || '').trim() || null
     };
     if (!payload.title || !payload.description || !payload.category) return toast('请填写所有必填项', true);
-    await doMutation(() => api(`/tickets/${ticket.id}`, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)}), '工单内容已更新');
+    await doMutation(() => api(`/tickets/${ticket.id}`, {method: 'PUT', headers: {'Content-Type': 'application/json', ...versionHeader(ticket)}, body: JSON.stringify(payload)}), '工单内容已更新');
   } else if (form.id === 'priorityForm') {
     const priority = String(data.get('priority'));
-    await doMutation(() => api(`/tickets/${ticket.id}/priority`, {method: 'PUT', headers: {'Content-Type': 'text/plain;charset=UTF-8'}, body: priority}), '优先级更新成功');
+    await doMutation(() => api(`/tickets/${ticket.id}/priority`, {method: 'PUT', headers: {'Content-Type': 'text/plain;charset=UTF-8', ...versionHeader(ticket)}, body: priority}), '优先级更新成功');
   } else if (form.id === 'assigneeForm') {
     const assignedTo = Number(data.get('assignedTo'));
     if (!Number.isInteger(assignedTo) || assignedTo < 1) return toast('请输入有效的用户 ID', true);
-    await doMutation(() => api(`/tickets/${ticket.id}/assignee`, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: String(assignedTo)}), '负责人更新成功');
+    await doMutation(() => api(`/tickets/${ticket.id}/assignee`, {method: 'PUT', headers: {'Content-Type': 'application/json', ...versionHeader(ticket)}, body: String(assignedTo)}), '负责人更新成功');
   } else if (form.id === 'commentForm') {
     const content = String(data.get('content') || '').trim();
     if (!content) return;
@@ -568,7 +590,8 @@ async function start() {
     const user = await api('/api/me');
     if (!user || !Number.isInteger(user.id) || !user.username) throw new Error('当前用户响应格式错误');
     state.user = user;
-    $('sideUsername').textContent = user.username;
+    $('sideUsername').textContent = `${user.username} · ${user.role || 'USER'}`;
+    $('createAssigneeWrap').hidden = user.role !== 'MANAGER';
     const initial = user.username.slice(0, 1).toUpperCase();
     $('sideAvatar').textContent = initial;
     $('topAvatar').textContent = initial;

@@ -10,6 +10,9 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.workhub.exception.TicketNotFoundException;
 import com.example.workhub.mapper.CommentMapper;
 import com.example.workhub.mapper.TicketMapper;
+import com.example.workhub.mapper.TicketAuditMapper;
+import com.example.workhub.model.TicketAuditLog;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.example.workhub.model.Comment;
 import com.example.workhub.model.Ticket;
 
@@ -21,6 +24,17 @@ public class CommentService {
 
     private final CommentMapper commentMapper;
     private final TicketMapper ticketMapper;
+    private TicketAuditMapper audit;
+    @Autowired public void attachAudit(TicketAuditMapper audit) { this.audit = audit; }
+    private void record(int ticketId, int actorId, String action, String newValue) {
+        if (audit == null) return;
+        TicketAuditLog entry = new TicketAuditLog();
+        entry.setTicketId(ticketId);
+        entry.setActorId(actorId);
+        entry.setAction(action);
+        entry.setNewValue(newValue);
+        audit.add(entry);
+    }
 
     public CommentService(CommentMapper commentMapper, TicketMapper ticketMapper) {
         this.commentMapper = commentMapper;
@@ -28,12 +42,16 @@ public class CommentService {
 
     }
 
+    @Transactional
     public int add(Comment comment) {
         Ticket ticket= ticketMapper.findById(comment.getTicketId());
         if (ticket ==null){
             throw new TicketNotFoundException("Ticket not found");
         }
-        return commentMapper.add(comment);
+        int affected = commentMapper.add(comment);
+        if (affected != 1) throw new IllegalStateException("Comment insert failed");
+        record(comment.getTicketId(), comment.getAuthorId(), "COMMENT", "Comment added");
+        return affected;
     }
 
     public List<Comment> findByTicketId(int ticketId) {
@@ -81,10 +99,9 @@ public class CommentService {
         );
 
         if (updated != 1) {
-            throw new IllegalStateException(
-                "Failed to mark resolution"
-            );
+            throw new IllegalStateException("Failed to mark resolution");
         }
+        record(ticketId, currentUserId, "RESOLUTION_MARK", String.valueOf(commentId));
     }
 
     @Transactional
@@ -121,6 +138,9 @@ public class CommentService {
         }
 
         // 4. Remove the Resolution mark
-        commentMapper.unmarkResolution(ticketId, commentId);
+        int affected = commentMapper.unmarkResolution(ticketId, commentId);
+        if (affected != 1) throw new ResponseStatusException(
+                HttpStatus.CONFLICT, "Comment is not marked as resolution");
+        record(ticketId, currentUserId, "RESOLUTION_UNMARK", String.valueOf(commentId));
     }
 }

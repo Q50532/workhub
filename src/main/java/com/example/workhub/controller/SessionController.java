@@ -24,6 +24,6 @@ public class SessionController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
         }
         // Never return User directly: it contains a password hash.
-        return new SessionUserResponse(user.getId(), user.getUsername());
+        return new SessionUserResponse(user.getId(), user.getUsername(), user.getRole());
     }
 }

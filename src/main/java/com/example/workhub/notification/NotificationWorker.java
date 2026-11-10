@@ -1,5 +1,6 @@
 package com.example.workhub.notification;
 
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,8 @@ public class NotificationWorker {
     public NotificationWorker(NotificationJobMapper mapper) { this.mapper = mapper; }
 
     public void process(long id) {
-        if (mapper.claim(id) != 1) return; // another worker owns it
+        String claimToken = UUID.randomUUID().toString();
+        if (mapper.claim(id, claimToken) != 1) return; // another worker owns it
         try {
             NotificationJob job = mapper.findById(id);
             if (job == null) throw new IllegalStateException("Notification job missing: " + id);
@@ -24,14 +26,21 @@ public class NotificationWorker {
                 case "SLA_BREACH" -> "Ticket #" + job.getTicketId() + " exceeded its SLA target";
                 default -> throw new IllegalArgumentException("Unknown notification type");
             };
-            if (mapper.markReady(id, message) != 1)
-                throw new IllegalStateException("Cannot complete notification " + id);
+            if (mapper.markReady(id, claimToken, message) != 1) {
+                // The lease may have expired and been claimed by another worker.
+                // Do not release another worker's claim.
+                log.warn("Notification {} completion ignored: worker no longer owns the claim", id);
+                return;
+            }
             log.debug("Notification {} ready for user {}", id, job.getRecipientId());
         } catch (RuntimeException e) {
-            log.error("Notification {} processing failed; will retry", id, e);
-            try { mapper.releaseForRetry(id); }
-            catch (RuntimeException recoveryError) {
-                // A stale PROCESSING lease will be reclaimed after two minutes.
+            log.error("Notification {} processing failed", id, e);
+            try {
+                if (mapper.releaseForRetry(id, claimToken) != 1) {
+                    log.warn("Notification {} release skipped: claim was superseded or job completed", id);
+                }
+            } catch (RuntimeException recoveryError) {
+                // The expired PROCESSING lease will be reclaimed or marked FAILED.
                 log.error("Notification {} retry release failed", id, recoveryError);
             }
         }

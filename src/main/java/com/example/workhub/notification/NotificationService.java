@@ -83,6 +83,9 @@ public class NotificationService {
                initialDelayString = "${workhub.notifications.retry-ms:10000}")
     public void recoverPending() {
         try {
+            // A worker that crashed on attempt #10 cannot be reclaimed; mark it FAILED.
+            int exhausted = mapper.expireExhausted();
+            if (exhausted > 0) log.warn("Marked {} expired notification jobs FAILED", exhausted);
             for (long id : mapper.pendingIds(50)) schedule(id);
         } catch (RuntimeException e) {
             log.error("Pending notification scan failed; next scan will retry", e);

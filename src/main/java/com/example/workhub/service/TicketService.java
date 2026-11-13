@@ -21,6 +21,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 public class TicketService {
     private static final String NOT_FOUND = "__WORKHUB_TICKET_NOT_FOUND__";
+    // Benchmark switch: true means ticket read bypasses Redis, while authorization remains unchanged.
+    private final boolean cacheDisabled = Boolean.parseBoolean(System.getenv("WORKHUB_CACHE_OFF"));
     /** Bounded stripes: avoid unbounded per-ticket lock allocation. Single-instance protection only. */
     private final Object[] cacheLocks = new Object[64];
     private final TicketMapper tickets;
@@ -97,6 +99,7 @@ public class TicketService {
     }
 
     public Ticket findById(int id) {
+        if (cacheDisabled) return tickets.findById(id); // Cache OFF: MySQL-only ticket read
         String key = "ticket:" + id;
         String value = cached(key);
         if (NOT_FOUND.equals(value)) return null;

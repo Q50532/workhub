@@ -49,8 +49,8 @@ Ticket status changes are recorded in the database for tracking and auditing.
 
 WorkHub implements a Cache-Aside strategy for ticket detail queries.
 
-- Ticket details are cached in Redis with a 60-second TTL.
-- Cache hits avoid repeated database queries.
+- Ticket details are cached in Redis with a randomized 50-70-second TTL (TTL jitter); missing tickets have a 15-second negative-cache TTL.
+- Cache hits avoid an additional ticket-detail query inside TicketService, but GET /tickets/{id} still queries MySQL through TicketAccessService.visibleTicket() for row-level authorization.
 - Cache misses trigger a MySQL query and cache population.
 - Cache invalidation is performed when relevant ticket data changes.
 - Transactional status updates schedule cache invalidation after successful database commits.
@@ -182,7 +182,7 @@ The current version focuses on demonstrating core backend functionality. Several
 
 1. **Transaction Test Coverage:** The rollback integration test verifies ticket status restoration. It does not yet independently assert rollback of ticket history records or the absence of `afterCommit()` callbacks after rollback.
 
-2. **Cache Consistency:** Cache invalidation after transaction commit reduces inconsistency risks, but does not guarantee strong consistency during concurrent updates or Redis failures. Ticket detail cache entries use a 60-second TTL.
+2. **Cache Consistency:** Cache invalidation after transaction commit reduces inconsistency risks, but does not guarantee strong consistency during concurrent updates or Redis failures. Ticket detail cache entries use a randomized 50-70-second TTL, with 15-second negative caching for missing tickets.
 
 3. **Test Isolation:** The current transaction integration test depends on an existing ticket with ID `14`. Future improvements should create and clean up dedicated test data automatically.
 
